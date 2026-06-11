@@ -1,13 +1,14 @@
+```json
 {
-  "name": "Каталог СТО",
+  "name": "СТО Каталог",
   "short_name": "СТО",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "./icon.png",
       "sizes": "192x192",
       "type": "image/png"
     }
