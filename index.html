@@ -11,9 +11,14 @@
 
         /* Слева: Схема */
         .sidebar { width: 45%; background: var(--panel); padding: 20px; border-right: 2px solid var(--accent); overflow-y: auto; display: flex; flex-direction: column; }
-        .sidebar img { width: 100%; border-radius: 8px; border: 2px solid #334155; transition: transform 0.3s; cursor: zoom-in; }
-        .sidebar img:hover { transform: scale(1.05); }
-
+        
+        .image-container { position: relative; display: inline-block; width: 100%; }
+        .image-container img { display: block; width: 100%; border-radius: 8px; border: 2px solid #334155; }
+        
+        /* Зоны клика */
+        .hotspot { position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: 0.3s; }
+        .hotspot:hover { border: 2px solid var(--accent); background: rgba(59, 130, 246, 0.3); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        
         /* Справа: Поиск и Таблица */
         .content { width: 55%; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
@@ -30,7 +35,13 @@
 
 <div class="sidebar">
     <h2 style="margin-top:0">Техническая схема</h2>
-    <img src="scheme.jpg" alt="Схема HMMWV">
+    <div class="image-container">
+        <img src="scheme.jpg" alt="Схема HMMWV">
+        <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
+        <a href="#" class="hotspot" onclick="filterByArea('suspension'); return false;" style="top: 80%; left: 45%; width: 15%; height: 10%;"></a>
+        <a href="#" class="hotspot" onclick="filterByArea('electric'); return false;" style="top: 57%; left: 2%; width: 15%; height: 10%;"></a>
+        <a href="#" class="hotspot" onclick="filterByArea('body'); return false;" style="top: 45%; left: 10%; width: 60%; height: 25%;"></a>
+    </div>
 </div>
 
 <div class="content">
@@ -73,6 +84,12 @@
 
 <script src="data.js"></script>
 <script>
+    function filterByArea(zoneValue) {
+        document.getElementById('fZone').value = zoneValue;
+        render();
+        document.querySelector('.table-wrapper').scrollIntoView({ behavior: 'smooth' });
+    }
+
     function render() {
         const zone = document.getElementById('fZone').value;
         const model = document.getElementById('fModel').value;
@@ -82,7 +99,6 @@
         const tbody = document.getElementById('tbody');
         tbody.innerHTML = '';
         
-        // Фильтрация данных
         db.filter(i => 
             (zone === 'all' || i.zone === zone) &&
             (model === 'all' || i.model === model || i.model === 'all') &&
