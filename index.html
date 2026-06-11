@@ -15,7 +15,6 @@
         .image-container { position: relative; display: inline-block; width: 100%; }
         .image-container img { display: block; width: 100%; border-radius: 8px; border: 2px solid #334155; }
         
-        /* Зоны клика */
         .hotspot { position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: 0.3s; }
         .hotspot:hover { border: 2px solid var(--accent); background: rgba(59, 130, 246, 0.3); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
         
@@ -29,6 +28,22 @@
         th { background: #334155; padding: 12px; position: sticky; top: 0; text-align: left; }
         td { padding: 10px; border-bottom: 1px solid #334155; }
         tr:hover { background: #2d3748; }
+
+        /* Корзина (Дефектная ведомость) */
+        .cart-panel { background: #0f172a; border: 2px solid var(--accent); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; max-height: 35vh; }
+        .cart-items { flex: 1; overflow-y: auto; margin-bottom: 10px; }
+        .cart-item { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 4px; }
+        .cart-item-info { flex: 1; font-size: 14px; }
+        .cart-controls { display: flex; align-items: center; gap: 10px; }
+        .cart-qty { width: 50px; text-align: center; padding: 5px; font-weight: bold; }
+        
+        /* Кнопки */
+        .btn-add { background: #10b981; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-add:hover { background: #059669; }
+        .btn-remove { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-tg { background: #0088cc; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 16px; display: flex; justify-content: center; align-items: center; gap: 10px; transition: 0.3s; }
+        .btn-tg:hover { background: #0077b5; }
+        .btn-tg:disabled { background: #475569; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -36,7 +51,8 @@
 <div class="sidebar">
     <h2 style="margin-top:0">Техническая схема</h2>
     <div class="image-container">
-        <img src="scheme.jpg" alt="Схема HMMWV">
+        <img src="scheme.jpg" alt="Схема">
+        <!-- Зоны клика -->
         <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
         <a href="#" class="hotspot" onclick="filterByArea('suspension'); return false;" style="top: 80%; left: 45%; width: 15%; height: 10%;"></a>
         <a href="#" class="hotspot" onclick="filterByArea('electric'); return false;" style="top: 57%; left: 2%; width: 15%; height: 10%;"></a>
@@ -76,18 +92,28 @@
 
     <div class="table-wrapper">
         <table>
-            <thead><tr><th>Артикул</th><th>Наименование</th></tr></thead>
+            <thead><tr><th style="width:50px;">Выбор</th><th>Артикул</th><th>Наименование</th></tr></thead>
             <tbody id="tbody"></tbody>
         </table>
+    </div>
+
+    <!-- Дефектная ведомость (Корзина) -->
+    <div class="cart-panel" id="cart-panel" style="display: none;">
+        <h3 style="margin: 0 0 10px 0; color: #3b82f6;">📋 Дефектная ведомость</h3>
+        <div class="cart-items" id="cart-items"></div>
+        <button class="btn-tg" id="btn-tg" onclick="sendToTelegram()">
+            Отправить заявку администратору
+        </button>
     </div>
 </div>
 
 <script src="data.js"></script>
 <script>
+    let cart = {}; // Объект для хранения запчастей в корзине
+
     function filterByArea(zoneValue) {
         document.getElementById('fZone').value = zoneValue;
         render();
-        document.querySelector('.table-wrapper').scrollIntoView({ behavior: 'smooth' });
     }
 
     function render() {
@@ -106,9 +132,122 @@
             (i.name.toLowerCase().includes(s) || i.art.toLowerCase().includes(s))
         )
         .forEach(i => {
-            tbody.innerHTML += `<tr><td><code>${i.art}</code></td><td>${i.name}</td></tr>`;
+            // Экранируем артикул для передачи в функцию
+            const safeArt = i.art.replace(/'/g, "\\'");
+            tbody.innerHTML += `
+                <tr>
+                    <td><button class="btn-add" onclick="addToCart('${safeArt}')">➕</button></td>
+                    <td><code>${i.art}</code></td>
+                    <td>${i.name}</td>
+                </tr>
+            `;
         });
     }
+
+    // --- ЛОГИКА КОРЗИНЫ --- //
+    
+    function addToCart(art) {
+        if (cart[art]) {
+            cart[art].qty += 1;
+        } else {
+            const item = db.find(i => i.art === art);
+            cart[art] = { name: item.name, art: item.art, qty: 1 };
+        }
+        renderCart();
+    }
+
+    function updateQty(art, qty) {
+        let newQty = parseInt(qty);
+        if (newQty <= 0 || isNaN(newQty)) {
+            delete cart[art];
+        } else {
+            cart[art].qty = newQty;
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        const cartItemsDiv = document.getElementById('cart-items');
+        const cartPanel = document.getElementById('cart-panel');
+        cartItemsDiv.innerHTML = '';
+        
+        const keys = Object.keys(cart);
+        if (keys.length === 0) {
+            cartPanel.style.display = 'none';
+            return;
+        }
+        
+        cartPanel.style.display = 'flex';
+        
+        keys.forEach(art => {
+            const item = cart[art];
+            const safeArt = art.replace(/'/g, "\\'");
+            cartItemsDiv.innerHTML += `
+                <div class="cart-item">
+                    <div class="cart-item-info">
+                        <strong>${item.name}</strong><br>
+                        <code style="color:#94a3b8">${item.art}</code>
+                    </div>
+                    <div class="cart-controls">
+                        <input class="cart-qty" type="number" min="0" value="${item.qty}" onchange="updateQty('${safeArt}', this.value)">
+                        <button class="btn-remove" onclick="updateQty('${safeArt}', 0)">✕</button>
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    function sendToTelegram() {
+        let text = "🛠 *Новая заявка на запчасти:*\n\n";
+        let count = 1;
+        
+        for (let art in cart) {
+            const item = cart[art];
+            text += `${count}. ${item.name}\nАрт: ${item.art} — ${item.qty} шт.\n\n`;
+            count++;
+        }
+
+        // Твои настройки бота
+        const BOT_TOKEN = '8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w';
+        const CHAT_ID = '483561525';
+        
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+
+        // Меняем кнопку
+        const btn = document.getElementById('btn-tg');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "⏳ Отправка...";
+        btn.disabled = true;
+
+        // Отправляем запрос
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                chat_id: CHAT_ID,
+                text: text,
+                parse_mode: 'Markdown'
+            })
+        })
+        .then(response => {
+            if(response.ok) {
+                alert('✅ Заявка успешно отправлена!');
+                cart = {}; // Очищаем корзину
+                renderCart();
+            } else {
+                alert('❌ Ошибка отправки. Попробуйте еще раз.');
+            }
+        })
+        .catch(error => {
+            alert('❌ Ошибка сети. Проверьте интернет.');
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+
+    // Первоначальная отрисовка
     render();
 </script>
 </body>
