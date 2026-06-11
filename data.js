@@ -1,3 +1,4 @@
+const db = [
 // --- BOGDANA, DODGE, FORD ---
 { art: "1922496", name: "Фильтр масляный (центробежный) DAF (Hengst)", zone: "engine", model: "Bogdana", engine: "all" },
 { art: "68224232AA", name: "Фильтр АКПП Dodge RAM 5500 (AS69RC)", zone: "transmission", model: "Dodge", engine: "all" },
@@ -175,3 +176,4 @@
 { art: "3411117-К00", name: "Пильник рульової рейки", zone: "steering", model: "Bogdana", engine: "all" },
 { art: "3701200AED01A", name: "Натяжний ролик генератора", zone: "engine", model: "Bogdana", engine: "all" },
 { art: "К151", name: "Патрубок GREAT WALL", zone: "engine", model: "Bogdana", engine: "all" }
+  ]
