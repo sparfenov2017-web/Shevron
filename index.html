@@ -1,0 +1,99 @@
+HTML
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <meta charset="UTF-8">
+    <title>СТО Каталог - База HMMWV</title>
+    <style>
+        :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+
+        /* Слева: Схема */
+        .sidebar { width: 45%; background: var(--panel); padding: 20px; border-right: 2px solid var(--accent); overflow-y: auto; display: flex; flex-direction: column; }
+        .sidebar img { width: 100%; border-radius: 8px; border: 2px solid #334155; transition: transform 0.3s; cursor: zoom-in; }
+        .sidebar img:hover { transform: scale(1.05); }
+
+        /* Справа: Поиск и Таблица */
+        .content { width: 55%; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; }
+        input, select { padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
+        
+        .table-wrapper { flex: 1; overflow-y: auto; border-radius: 8px; border: 1px solid #334155; }
+        table { width: 100%; border-collapse: collapse; background: var(--panel); }
+        th { background: #334155; padding: 12px; position: sticky; top: 0; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #334155; }
+        tr:hover { background: #2d3748; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2 style="margin-top:0">Техническая схема</h2>
+    <img src="scheme.jpg" alt="Схема HMMWV">
+</div>
+
+<div class="content">
+    <div class="controls">
+        <input type="text" id="search" placeholder="Поиск запчасти..." onkeyup="render()">
+        <select id="fZone" onchange="render()">
+            <option value="all">Узел (Все)</option>
+            <option value="engine">Двигатель</option>
+            <option value="suspension">Ходовая</option>
+            <option value="brakes">Тормоза</option>
+            <option value="transmission">Трансмиссия</option>
+            <option value="steering">Рулевое</option>
+            <option value="electric">Электрика</option>
+            <option value="body">Кузов</option>
+            <option value="chassis">Шасси/Рама</option>
+        </select>
+        <select id="fModel" onchange="render()">
+            <option value="all">Модель (Все)</option>
+            <option value="M998">M998</option>
+            <option value="M1151">M1151/M1152</option>
+            <option value="Bogdana">Bogdana/GW</option>
+            <option value="MaxxPro">MaxxPro</option>
+            <option value="Kirpi">Kirpi</option>
+        </select>
+        <select id="fEngine" onchange="render()">
+            <option value="all">ДВС (Все)</option>
+            <option value="6.2">6.2</option>
+            <option value="6.5">6.5</option>
+            <option value="6.5t">6.5 Turbo</option>
+        </select>
+    </div>
+
+    <div class="table-wrapper">
+        <table>
+            <thead><tr><th>Артикул</th><th>Наименование</th></tr></thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+    function render() {
+        const zone = document.getElementById('fZone').value;
+        const model = document.getElementById('fModel').value;
+        const engine = document.getElementById('fEngine').value;
+        const s = document.getElementById('search').value.toLowerCase();
+        
+        const tbody = document.getElementById('tbody');
+        tbody.innerHTML = '';
+        
+        // Фильтрация данных
+        db.filter(i => 
+            (zone === 'all' || i.zone === zone) &&
+            (model === 'all' || i.model === model || i.model === 'all') &&
+            (engine === 'all' || i.engine === engine || i.engine === 'all') &&
+            (i.name.toLowerCase().includes(s) || i.art.toLowerCase().includes(s))
+        )
+        .forEach(i => {
+            tbody.innerHTML += `<tr><td><code>${i.art}</code></td><td>${i.name}</td></tr>`;
+        });
+    }
+    render();
+</script>
+</body>
+</html>

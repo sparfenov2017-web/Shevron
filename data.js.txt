@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>База запчастей СТО</title>
+    <style>
+        body { font-family: sans-serif; background: #0f172a; color: white; margin: 0; }
+        .controls { padding: 20px; background: #1e293b; display: flex; gap: 10px; justify-content: center; position: sticky; top: 0; }
+        .container { padding: 20px; max-width: 1200px; margin: auto; display: flex; gap: 20px; }
+        table { width: 100%; border-collapse: collapse; background: #1e293b; }
+        th { background: #334155; padding: 10px; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #475569; font-size: 14px; }
+        .art { font-family: monospace; color: #60a5fa; }
+        .schema-view { width: 400px; background: #1e293b; padding: 15px; border-radius: 8px; border: 1px dashed #64748b; height: fit-content; }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="text" id="search" placeholder="Поиск по артикулу или названию..." onkeyup="render()">
+        <select id="fModel" onchange="render()"><option value="all">Все модели</option><option value="HMMWV">HMMWV</option><option value="Ford">Ford F-550</option><option value="M113">M113</option><option value="MaxxPro">MaxxPro</option><option value="Bogdan">Богдан/GW</option></select>
+    </div>
+    <div class="container">
+        <div class="schema-view">
+            <h3>Схема узла</h3>
+            <div id="schema-area">Загрузите схему (назовите 'scheme.jpg')</div>
+        </div>
+        <table>
+            <thead><tr><th>Артикул</th><th>Наименование</th><th>Модель</th></tr></thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+    <script src="data.js"></script>
+    <script>
+        function render() {
+            const m = document.getElementById('fModel').value;
+            const s = document.getElementById('search').value.toLowerCase();
+            const tbody = document.getElementById('tbody');
+            tbody.innerHTML = '';
+            
+            db.filter(i => (m === 'all' || i.model === m) && 
+                          (i.name.toLowerCase().includes(s) || i.art.toLowerCase().includes(s)))
+            .forEach(i => {
+                tbody.innerHTML += `<tr><td class="art">${i.art}</td><td>${i.name}</td><td>${i.model}</td></tr>`;
+            });
+        }
+        render();
+    </script>
+</body>
+</html>
