@@ -14,7 +14,7 @@
         .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); cursor: pointer; }
         @media (max-width: 850px) { .sidebar { display: none; } }
         .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
-        .tab-btn { flex: 1; padding: 10px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .tab-btn { padding: 10px 15px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); }
         .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; }
         input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
@@ -22,9 +22,8 @@
         table { width: 100%; border-collapse: collapse; }
         th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #334155; }
-        .cart-item { background: #1e293b; padding: 10px; margin-bottom: 5px; border-radius: 6px; }
-        .btn-action { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }
         .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
         .vin-tag { background: #3b82f6; padding: 3px 8px; border-radius: 4px; margin-right: 5px; display: inline-block; margin-top: 5px; }
     </style>
 </head>
@@ -76,30 +75,54 @@
         const cont = document.getElementById('view-container');
         if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('btn-admin').classList.add('active'); }
         else if(t === 'catalog') { 
-            cont.innerHTML = `<div class="controls"><input id="search" placeholder="Поиск..." onkeyup="renderTable()"><select id="fZone" onchange="renderTable()"><option value="all">Узел</option></select><select id="fModel" onchange="renderTable()"><option value="all">Модель</option></select><select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option></select></div><div class="table-wrapper"><table><tbody id="tbody"></tbody></table></div>`;
+            cont.innerHTML = `
+            <div class="controls">
+                <input id="search" placeholder="Поиск..." onkeyup="renderTable()">
+                <select id="fZone" onchange="renderTable()"><option value="all">Узел</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option></select>
+                <select id="fModel" onchange="renderTable()"><option value="all">Модель</option><option value="M998">M998</option><option value="M1151">M1151</option></select>
+                <select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option><option value="6.5">6.5</option><option value="6.5t">6.5 Turbo</option></select>
+            </div>
+            <div class="table-wrapper"><table><thead><tr><th>+</th><th>Арт</th><th>Название</th></tr></thead><tbody id="tbody"></tbody></table></div>`;
             document.getElementById('b1').classList.add('active'); renderTable(); 
         }
         else if(t === 'cart') { 
             let vinOptions = (currentUser.role === 'mechanic' && currentUser.assignedCars?.length > 0) 
                 ? currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')
                 : `<option value="manual">Введите вручную</option>`;
-            cont.innerHTML = `<h3>🛒 Заказ</h3><select id="carVin">${vinOptions}</select><input id="manualVin" placeholder="Или введите VIN" style="display:none;"><div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
+            cont.innerHTML = `<h3>🛒 Заказ</h3><select id="carVin">${vinOptions}</select><input id="manualVin" placeholder="Или введите VIN" style="display:none;"><div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
             document.getElementById('b2').classList.add('active'); renderCart();
         }
         else if(t === 'history') { cont.innerHTML = "<h3>История</h3>"; document.getElementById('b3').classList.add('active'); }
     }
 
     function renderAdmin() {
-        let html = `<h3>Управление</h3>`;
+        let html = `<h3>Пользователи</h3>
+            <div class="admin-card">
+                <input id="newLog" placeholder="Логин">
+                <input id="newPass" placeholder="Пароль">
+                <select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
+                <button class="btn-action" onclick="addUser()">Добавить сотрудника</button>
+            </div>`;
         users.forEach((u, idx) => {
             let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет';
             html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>
                 Машины: ${cars}<br>
                 <input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button>
-                <button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">Удалить юзера</button>
+                <button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button>
             </div>`;
         });
         return html;
+    }
+
+    function addUser() {
+        const login = document.getElementById('newLog').value;
+        const pass = document.getElementById('newPass').value;
+        const role = document.getElementById('newRole').value;
+        if(login && pass) {
+            users.push({ login, pass, role, assignedCars: [] });
+            localStorage.setItem('users', JSON.stringify(users));
+            switchTab('admin');
+        } else alert("Заполните логин и пароль");
     }
 
     function addVin(idx) {
@@ -127,9 +150,16 @@
     function renderTable() {
         const tbody = document.getElementById('tbody');
         if(!tbody || typeof db === 'undefined') return;
+        const s = document.getElementById('search').value.toLowerCase();
+        const z = document.getElementById('fZone').value;
+        const m = document.getElementById('fModel').value;
+        const e = document.getElementById('fEngine').value;
         tbody.innerHTML = '';
-        db.forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
+        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
+        .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
     }
+
+    function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); renderTable(); }
 
     function addToCart(art) {
         if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
@@ -157,6 +187,7 @@
 
     if (currentUser) {
         document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('main-tabs').style.display = 'flex';
         if (currentUser.role === 'manager') document.getElementById('btn-admin').style.display = 'block';
         switchTab('catalog');
     }
