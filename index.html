@@ -3,151 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>СТО Система управления</title>
+    <title>СТО Система</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        .content { width: 100%; padding: 15px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-        .tabs { display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
-        .tab-btn { flex: 1; padding: 10px; background: #334155; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; }
-        .tab-btn.active { background: var(--accent); color: white; }
-        .cart-badge { background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 4px; display: none; }
-        input, select { padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; width: 100%; box-sizing: border-box; }
-        .btn-action { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
-        .table-wrapper { flex: 1; overflow-y: auto; border-radius: 8px; border: 1px solid #334155; background: #1e293b; }
+        
+        /* Сетка: лево - схема, право - контент */
+        .sidebar { width: 350px; background: var(--panel); padding: 15px; border-right: 2px solid var(--accent); overflow-y: auto; }
+        .content { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .image-container { position: relative; width: 100%; }
+        .image-container img { width: 100%; border-radius: 8px; border: 2px solid #334155; }
+        .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); cursor: pointer; }
+
+        @media (max-width: 850px) { .sidebar { display: none; } }
+        
+        .tabs { display: flex; gap: 5px; }
+        .tab-btn { flex: 1; padding: 10px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        .tab-btn.active { background: var(--accent); }
+        
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
+        .table-wrapper { flex: 1; overflow-y: auto; background: var(--panel); border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
-        th { background: #334155; padding: 12px; position: sticky; top: 0; text-align: left; font-size: 14px; }
-        td { padding: 10px; border-bottom: 1px solid #334155; font-size: 14px; }
-        .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #334155; }
+        
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:10000; display:flex; justify-content:center; align-items:center;">
-    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px; border:1px solid #3b82f6;">
-        <h2 style="color:white; margin-top:0;">Вход в систему</h2>
-        <input type="text" id="inLogin" placeholder="Логин">
-        <input type="password" id="inPass" placeholder="Пароль" style="margin-top:10px;">
-        <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
+<!-- ЭКРАН ВХОДА -->
+<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:999; display:flex; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px;">
+        <h2>Вход</h2>
+        <input type="text" id="inLogin" placeholder="Логин" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="inPass" placeholder="Пароль" style="width:100%;">
+        <button onclick="login()" class="btn-action" style="width:100%; margin-top:15px;">Войти</button>
+    </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <h3>Схема</h3>
+    <div class="image-container">
+        <img src="scheme.jpg" alt="Схема">
+        <!-- Hotspots -->
+        <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
     </div>
 </div>
 
 <div class="content">
-    <div class="tabs" id="main-tabs" style="display:none;">
-        <button class="tab-btn active" id="btn-catalog" onclick="switchTab('catalog')">📦 Каталог</button>
-        <button class="tab-btn" id="btn-cart" onclick="switchTab('cart')">🛒 Корзина <span class="cart-badge" id="cart-badge">0</span></button>
-        <button class="tab-btn" onclick="switchTab('history')">📝 История</button>
+    <div class="tabs">
+        <button class="tab-btn active" id="b1" onclick="switchTab('catalog')">📦 Каталог</button>
+        <button class="tab-btn" id="b2" onclick="switchTab('cart')">🛒 Корзина</button>
+        <button class="tab-btn" id="b3" onclick="switchTab('history')">📝 История</button>
         <button class="tab-btn" id="btn-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">⚙️ Админка</button>
-        <button class="tab-btn" onclick="logout()" style="background:#ef4444;">🚪</button>
+        <button class="tab-btn" onclick="logout()" style="background:#ef4444;">Выход</button>
     </div>
     <div id="view-container"></div>
 </div>
 
 <script src="data.js"></script>
 <script>
-    // 1. ИНИЦИАЛИЗАЦИЯ (ЖЕЛЕЗОБЕТОННАЯ)
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    // Если база пустая или нет админа - принудительно прописываем
-    if (users.length === 0 || !users.find(u => u.login === '0666261351')) {
-        users = [{login: '0666261351', pass: 'Saranskaya59', role: 'manager'}];
-        localStorage.setItem('users', JSON.stringify(users));
-    }
-
+    // ИНИЦИАЛИЗАЦИЯ
+    let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager"}]');
     let currentUser = JSON.parse(localStorage.getItem('current_user'));
     let cart = {};
 
     function login() {
-        const l = document.getElementById('inLogin').value;
-        const p = document.getElementById('inPass').value;
-        const user = users.find(u => u.login === l && u.pass === p);
-        if(user) {
-            localStorage.setItem('current_user', JSON.stringify(user));
-            location.reload();
-        } else { alert("❌ Неверный логин или пароль"); }
+        const u = users.find(x => x.login === document.getElementById('inLogin').value && x.pass === document.getElementById('inPass').value);
+        if(u) { localStorage.setItem('current_user', JSON.stringify(u)); location.reload(); }
+        else alert("❌ Ошибка");
     }
     function logout() { localStorage.removeItem('current_user'); location.reload(); }
 
-    // 2. АДМИНКА
-    function renderAdmin() {
-        let html = `<h3>Пользователи</h3>`;
-        users.forEach(u => {
-            html += `<div class="admin-card"><strong>${u.login}</strong> | Роль: ${u.role}
-                <button onclick="deleteUser('${u.login}')" style="float:right; background:#ef4444; border:none; color:white; border-radius:4px; cursor:pointer;">Удалить</button>
-            </div>`;
-        });
-        html += `<h3>Добавить сотрудника</h3>
-                 <input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль" style="margin-top:5px;">
-                 <select id="newRole" style="margin-top:5px;"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
-                 <button onclick="addUser()" class="btn-action" style="margin-top:10px;">Добавить</button>`;
-        return html;
-    }
-    function addUser() {
-        users.push({ login: document.getElementById('newLog').value, pass: document.getElementById('newPass').value, role: document.getElementById('newRole').value });
-        localStorage.setItem('users', JSON.stringify(users));
-        switchTab('admin');
-    }
-    function deleteUser(log) {
-        if(log === '0666261351') return alert("Главного админа нельзя удалить!");
-        users = users.filter(u => u.login !== log);
-        localStorage.setItem('users', JSON.stringify(users));
-        switchTab('admin');
+    function switchTab(t) {
+        const cont = document.getElementById('view-container');
+        if(t === 'admin') cont.innerHTML = renderAdmin();
+        else if(t === 'catalog') { cont.innerHTML = `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;"><input id="search" placeholder="Поиск..." onkeyup="renderTable()"><select id="fZone"><option value="all">Узел</option></select></div><div class="table-wrapper"><table><tbody id="tbody"></tbody></table></div>`; renderTable(); }
+        else if(t === 'cart') cont.innerHTML = `<input id="carVin" placeholder="VIN авто"><div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
+        else if(t === 'history') cont.innerHTML = "История";
     }
 
-    // 3. КАТАЛОГ И КОРЗИНА
-    function renderCatalog() {
-        let html = `<div class="table-wrapper"><table><thead><tr><th>+</th><th>Арт</th><th>Название</th></tr></thead><tbody id="tbody"></tbody></table></div>`;
-        return html;
-    }
-    function renderCatalogData() {
+    function renderTable() {
         const tbody = document.getElementById('tbody');
-        if(!tbody || typeof db === 'undefined') return;
+        if(!tbody) return;
         tbody.innerHTML = '';
         db.forEach(i => {
-            tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')" style="padding:5px; border:none; background:#10b981; color:white; cursor:pointer;">➕</button></td><td><code>${i.art}</code></td><td>${i.name}</td></tr>`;
+            tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`;
         });
     }
 
     function addToCart(art) {
-        if (cart[art]) cart[art].qty += 1;
-        else { const item = db.find(i => i.art === art); cart[art] = { name: item.name, art: item.art, qty: 1 }; }
-        const badge = document.getElementById('cart-badge');
-        badge.style.display = 'inline-block';
-        badge.innerText = Object.keys(cart).length;
+        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
+        else cart[art].qty++;
+        alert("Добавлено: " + art);
     }
 
-    function renderCart() {
-        let html = `<h3>🛒 Заявка</h3><input id="carVin" placeholder="VIN авто"> <div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" style="margin-top:10px;" onclick="sendToTelegram()">Отправить администратору</button>`;
+    function renderAdmin() {
+        let html = `<h3>Пользователи</h3>`;
+        users.forEach(u => html += `<div class="admin-card"><strong>${u.login}</strong> | ${u.role}</div>`);
+        html += `<input id="newLog" placeholder="Логин"><button class="btn-action" onclick="addUser()">Добавить</button>`;
         return html;
     }
 
-    async function sendToTelegram() {
-        const vin = document.getElementById('carVin').value;
-        if(!vin) return alert('Введите VIN');
-        let text = `🛠 Заявка: ${vin}\n`;
-        for(let art in cart) text += `${cart[art].name} - ${cart[art].qty} шт.\n`;
-        
-        await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-        });
-        alert('✅ Отправлено!');
-        cart = {};
-        switchTab('history');
-    }
-
-    function switchTab(t) {
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        const cont = document.getElementById('view-container');
-        if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('btn-admin').classList.add('active'); }
-        else if(t === 'catalog') { cont.innerHTML = renderCatalog(); renderCatalogData(); document.getElementById('btn-catalog').classList.add('active'); }
-        else if(t === 'cart') { cont.innerHTML = renderCart(); document.getElementById('btn-cart').classList.add('active'); }
-        else if(t === 'history') { cont.innerHTML = "<h3>История заказов</h3><p>Скоро будет...</p>"; }
-    }
-
-    // СТАРТ
+    // ЗАПУСК
     if (currentUser) {
         document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('main-tabs').style.display = 'flex';
         if (currentUser.role === 'manager') document.getElementById('btn-admin').style.display = 'block';
         switchTab('catalog');
     }
