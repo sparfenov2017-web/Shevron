@@ -29,7 +29,8 @@
         td { padding: 10px; border-bottom: 1px solid #334155; }
         
         .cart-panel { background: #0f172a; border: 2px solid var(--accent); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .cart-item { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 8px; margin-bottom: 5px; border-radius: 4px; }
+        .cart-item { display: flex; align-items: center; justify-content: space-between; background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; }
+        .status-select { background: #334155; color: white; border: none; padding: 5px; border-radius: 4px; font-size: 12px; margin: 5px 0; display: block; }
         .cart-qty { width: 50px; text-align: center; padding: 5px; color: #000; font-weight: bold; }
         .btn-add { background: #10b981; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
         .btn-remove { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
@@ -59,7 +60,7 @@
     <div class="controls">
         <input type="text" id="carVin" placeholder="VIN авто" style="border: 2px solid #3b82f6;">
         <input type="text" id="search" placeholder="Поиск..." onkeyup="render()">
-        <select id="fZone" onchange="render()"><option value="all">Узел (Все)</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option><option value="brakes">Тормоза</option><option value="transmission">Трансмиссия</option><option value="steering">Рулевое</option><option value="electric">Электрика</option><option value="body">Кузов</option><option value="chassis">Шасси/Рама</option></select>
+        <select id="fZone" onchange="render()"><option value="all">Узел (Все)</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option><option value="brakes">Тормоза</option><option value="transmission">Трансмиссия</option><option value="steering">Рулевое</option><option value="electric">Электрика</option><option value="body">Кузов</option></select>
         <select id="fModel" onchange="render()"><option value="all">Модель (Все)</option><option value="M998">M998</option><option value="M1151">M1151</option><option value="Bogdana">Bogdana</option></select>
         <select id="fEngine" onchange="render()"><option value="all">ДВС (Все)</option><option value="6.2">6.2</option><option value="6.5">6.5</option><option value="6.5t">6.5 Turbo</option></select>
     </div>
@@ -111,14 +112,30 @@
         if (Object.keys(cart).length === 0) { panel.style.display = 'none'; return; }
         panel.style.display = 'flex';
         for (let art in cart) {
-            div.innerHTML += `<div class="cart-item"><div><strong>${cart[art].name}</strong><br><code>${cart[art].art}</code></div><div><input class="cart-qty" type="number" value="${cart[art].qty}" onchange="updateQty('${art.replace(/'/g, "\\'")}', this.value)"><button class="btn-remove" onclick="updateQty('${art.replace(/'/g, "\\'")}', 0)">✕</button></div></div>`;
+            div.innerHTML += `
+                <div class="cart-item">
+                    <div><strong>${cart[art].name}</strong><br><code>${cart[art].art}</code></div>
+                    <div>
+                        <select class="status-select" id="status-${art.replace(/\W/g, '')}">
+                            <option value="Новая деталь">Новая деталь</option>
+                            <option value="В ремонт (снято)">В ремонт (снято)</option>
+                            <option value="С ремонта (установлено)">С ремонта (установлено)</option>
+                        </select>
+                        <input class="cart-qty" type="number" value="${cart[art].qty}" onchange="updateQty('${art.replace(/'/g, "\\'")}', this.value)">
+                        <button class="btn-remove" onclick="updateQty('${art.replace(/'/g, "\\'")}', 0)">✕</button>
+                    </div>
+                </div>`;
         }
     }
 
     function sendToTelegram() {
         const vin = document.getElementById('carVin').value || "Не указан";
         let text = `🛠 *Новая заявка*\n🚗 *VIN:* \`${vin}\`\n\n`;
-        for (let art in cart) text += `• ${cart[art].name} (${cart[art].art}) — ${cart[art].qty} шт.\n`;
+        
+        for (let art in cart) {
+            const status = document.getElementById(`status-${art.replace(/\W/g, '')}`).value;
+            text += `• ${cart[art].name} (${cart[art].art})\n  Кол-во: ${cart[art].qty} | Статус: *${status}*\n\n`;
+        }
         
         const btn = document.getElementById('btn-tg'); btn.innerHTML = "⏳ Отправка..."; btn.disabled = true;
         fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
