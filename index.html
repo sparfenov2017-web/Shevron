@@ -75,7 +75,26 @@
 </div>
 
 <script src="data.js"></script>
+<script src="data.js"></script>
 <script>
+    // Функция проверки устройства
+    function checkMobile() {
+        const sidebar = document.querySelector('.sidebar');
+        const content = document.querySelector('.content');
+        if (window.innerWidth <= 850) {
+            sidebar.style.display = 'none';
+            content.style.width = '100%';
+        } else {
+            sidebar.style.display = 'flex';
+            content.style.width = '55%';
+        }
+    }
+
+    // Запускаем при загрузке
+    checkMobile();
+    // И запускаем каждый раз, если кто-то повернет телефон
+    window.addEventListener('resize', checkMobile);
+
     let cart = {};
     function filterByArea(z) { document.getElementById('fZone').value = z; render(); }
     
