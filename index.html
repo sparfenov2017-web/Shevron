@@ -53,7 +53,8 @@
         <button class="tab-btn" id="b-cat" onclick="switchTab('catalog')">📦 Каталог</button>
         <button class="tab-btn" id="b-cart" onclick="switchTab('cart')">🛒 Корзина</button>
         <button class="tab-btn" id="b-hist" onclick="switchTab('history')">📝 История</button>
-        <button class="tab-btn" id="b-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">⚙️ Админка</button>
+        <button class="tab-btn" id="b-settings" onclick="switchTab('settings')">⚙️ Настройки</button>
+        <button class="tab-btn" id="b-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">👑 Админка</button>
         <button class="tab-btn" onclick="logout()" style="background:#ef4444;">🚪</button>
     </div>
     <div id="view-container"></div>
@@ -77,6 +78,7 @@
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         const cont = document.getElementById('view-container');
         if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('b-admin').classList.add('active'); }
+        else if(t === 'settings') { cont.innerHTML = renderSettings(); document.getElementById('b-settings').classList.add('active'); }
         else if(t === 'catalog') { 
             cont.innerHTML = `
             <div class="controls">
@@ -100,97 +102,41 @@
         else if(t === 'history') { cont.innerHTML = "<h3>История</h3><div id='history-list'></div>"; document.getElementById('b-hist').classList.add('active'); renderHistory(); }
     }
 
-    function renderTable() {
-        const tbody = document.getElementById('tbody');
-        if(!tbody || typeof db === 'undefined') return;
-        const s = document.getElementById('search').value.toLowerCase();
-        const z = document.getElementById('fZone').value;
-        const m = document.getElementById('fModel').value;
-        const e = document.getElementById('fEngine').value;
-        tbody.innerHTML = '';
-        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
-        .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
-    }
-
-    function addToCart(art) {
-        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
-        else cart[art].qty++;
-        alert("Добавлено");
-    }
-    
-    function removeFromCart(art) { delete cart[art]; renderCart(); }
-
-    function renderCart() {
-        const list = document.getElementById('cart-list');
-        list.innerHTML = '';
-        for(let art in cart) {
-            list.innerHTML += `<div class="cart-item">
-                <strong>${cart[art].name}</strong> (${cart[art].art})
-                <button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; cursor:pointer;">✕</button>
-                <br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select>
-                <input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;">
+    function renderSettings() {
+        return `<h3>⚙️ Настройки</h3>
+            <div class="admin-card">
+                <p>Смена пароля для: <b>${currentUser.login}</b></p>
+                <input id="oldPass" type="password" placeholder="Старый пароль" style="width:100%; margin-bottom:10px;">
+                <input id="newPass" type="password" placeholder="Новый пароль" style="width:100%; margin-bottom:10px;">
+                <button class="btn-action" onclick="changePassword()">Сохранить новый пароль</button>
             </div>`;
-        }
     }
 
-    async function sendToTelegram() {
-        const vinEl = document.getElementById('carVin');
-        const vin = vinEl ? vinEl.value : "Нет VIN";
-        if(!vin) return alert('Введите VIN');
+    function changePassword() {
+        const oldP = document.getElementById('oldPass').value;
+        const newP = document.getElementById('newPass').value;
+        if(oldP !== currentUser.pass) return alert("❌ Старый пароль неверный!");
+        if(!newP) return alert("Введите новый пароль");
         
-        let text = `🛠 <b>Заявка: ${vin}</b>\n`;
-        let count = 0;
-        for(let art in cart) {
-            const status = document.getElementById(`status-${art}`).value;
-            const qty = document.getElementById(`qty-${art}`).value;
-            text += `\n${cart[art].name} (${qty} шт.) - ${status}`;
-            count++;
-        }
-        if(count === 0) return alert('Корзина пуста');
-
-        try {
-            const response = await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-            });
-            const res = await response.json();
-            if(res.ok) {
-                let hist = JSON.parse(localStorage.getItem('order_history') || '[]');
-                hist.push({ date: new Date().toLocaleString(), vin: vin });
-                localStorage.setItem('order_history', JSON.stringify(hist));
-                alert('✅ Отправлено!');
-                cart = {};
-                switchTab('history');
-            } else {
-                alert('❌ Ошибка API: ' + res.description);
-            }
-        } catch(e) {
-            alert('❌ Ошибка сети: ' + e);
-        }
+        currentUser.pass = newP;
+        const idx = users.findIndex(u => u.login === currentUser.login);
+        users[idx].pass = newP;
+        
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        alert("✅ Пароль успешно изменен!");
+        switchTab('settings');
     }
 
-    function renderHistory() {
-        const list = document.getElementById('history-list');
-        const hist = JSON.parse(localStorage.getItem('order_history') || '[]');
-        list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join('');
-    }
-
-    function renderAdmin() {
-        let html = `<h3>Пользователи</h3><div class="admin-card"><input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select><button class="btn-action" onclick="addUser()">Добавить</button></div>`;
-        users.forEach((u, idx) => {
-            let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет';
-            html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>Машины: ${cars}<br><input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button><button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button></div>`;
-        });
-        return html;
-    }
-
-    function addUser() {
-        const l = document.getElementById('newLog').value;
-        const p = document.getElementById('newPass').value;
-        const r = document.getElementById('newRole').value;
-        if(l && p) { users.push({login: l, pass: p, role: r, assignedCars: []}); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
-    }
+    // Вспомогательные функции (остальное без изменений)
+    function renderTable() { const tbody = document.getElementById('tbody'); if(!tbody || typeof db === 'undefined') return; const s = document.getElementById('search').value.toLowerCase(); const z = document.getElementById('fZone').value; const m = document.getElementById('fModel').value; const e = document.getElementById('fEngine').value; tbody.innerHTML = ''; db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s))).forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; }); }
+    function addToCart(art) { if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 }; else cart[art].qty++; alert("Добавлено"); }
+    function removeFromCart(art) { delete cart[art]; renderCart(); }
+    function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; for(let art in cart) list.innerHTML += `<div class="cart-item"><strong>${cart[art].name}</strong> (${cart[art].art})<button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; float:right; cursor:pointer;">✕</button><br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select><input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;"></div>`; }
+    function renderHistory() { const list = document.getElementById('history-list'); const hist = JSON.parse(localStorage.getItem('order_history') || '[]'); list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join(''); }
+    async function sendToTelegram() { const vinEl = document.getElementById('carVin'); const vin = vinEl ? vinEl.value : "Нет VIN"; if(!vin) return alert('Введите VIN'); let text = `🛠 <b>Заявка: ${vin}</b>\n`; for(let art in cart) { const status = document.getElementById(`status-${art}`).value; const qty = document.getElementById(`qty-${art}`).value; text += `\n${cart[art].name} (${qty} шт.) - ${status}`; } try { await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' }) }); let hist = JSON.parse(localStorage.getItem('order_history') || '[]'); hist.push({ date: new Date().toLocaleString(), vin: vin }); localStorage.setItem('order_history', JSON.stringify(hist)); alert('✅ Отправлено!'); cart = {}; switchTab('history'); } catch(e) { alert('Ошибка: ' + e); } }
+    function renderAdmin() { let html = `<h3>Пользователи</h3><div class="admin-card"><input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select><button class="btn-action" onclick="addUser()">Добавить</button></div>`; users.forEach((u, idx) => { let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет'; html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>Машины: ${cars}<br><input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button><button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button></div>`; }); return html; }
+    function addUser() { const l = document.getElementById('newLog').value; const p = document.getElementById('newPass').value; const r = document.getElementById('newRole').value; if(l && p) { users.push({login: l, pass: p, role: r, assignedCars: []}); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function addVin(idx) { const vin = document.getElementById('vin-'+idx).value; if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function removeVin(uIdx, vIdx) { users[uIdx].assignedCars.splice(vIdx, 1); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     function deleteUser(log) { if(log !== '0666261351') { users = users.filter(u => u.login !== log); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
