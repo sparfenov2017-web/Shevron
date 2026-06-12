@@ -89,13 +89,11 @@
             document.getElementById('b-cat').classList.add('active'); renderTable(); 
         }
         else if(t === 'cart') { 
-            // Менеджеры: всегда поле ввода. Механики: список или поле, если пусто.
             let vinHtml = (currentUser.role === 'manager') 
                 ? `<input id="carVin" placeholder="Введите VIN машины...">`
                 : (currentUser.assignedCars?.length > 0) 
                     ? `<select id="carVin">${currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`
-                    : `<input id="carVin" placeholder="Введите VIN вручную...">`;
-            
+                    : `<input id="carVin" placeholder="Введите VIN (назначьте авто у админа)">`;
             cont.innerHTML = `<h3>🛒 Заказ</h3>${vinHtml}<div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
             document.getElementById('b-cart').classList.add('active'); renderCart();
         }
@@ -129,44 +127,60 @@
             list.innerHTML += `<div class="cart-item">
                 <strong>${cart[art].name}</strong> (${cart[art].art})
                 <button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; cursor:pointer;">✕</button>
-                <br><select class="status-select" id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select>
+                <br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select>
                 <input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;">
             </div>`;
+        }
+    }
+
+    async function sendToTelegram() {
+        const vinEl = document.getElementById('carVin');
+        const vin = vinEl ? vinEl.value : "Нет VIN";
+        if(!vin) return alert('Введите VIN');
+        
+        let text = `🛠 <b>Заявка: ${vin}</b>\n`;
+        let count = 0;
+        for(let art in cart) {
+            const status = document.getElementById(`status-${art}`).value;
+            const qty = document.getElementById(`qty-${art}`).value;
+            text += `\n${cart[art].name} (${qty} шт.) - ${status}`;
+            count++;
+        }
+        if(count === 0) return alert('Корзина пуста');
+
+        try {
+            const response = await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
+            });
+            const res = await response.json();
+            if(res.ok) {
+                let hist = JSON.parse(localStorage.getItem('order_history') || '[]');
+                hist.push({ date: new Date().toLocaleString(), vin: vin });
+                localStorage.setItem('order_history', JSON.stringify(hist));
+                alert('✅ Отправлено!');
+                cart = {};
+                switchTab('history');
+            } else {
+                alert('❌ Ошибка API: ' + res.description);
+            }
+        } catch(e) {
+            alert('❌ Ошибка сети: ' + e);
         }
     }
 
     function renderHistory() {
         const list = document.getElementById('history-list');
         const hist = JSON.parse(localStorage.getItem('order_history') || '[]');
-        list.innerHTML = hist.map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join('');
-    }
-
-    async function sendToTelegram() {
-        const vinEl = document.getElementById('carVin');
-        const vin = vinEl.value;
-        if(!vin) return alert('Введите VIN');
-        
-        let hist = JSON.parse(localStorage.getItem('order_history') || '[]');
-        hist.push({ date: new Date().toLocaleString(), vin: vin });
-        localStorage.setItem('order_history', JSON.stringify(hist));
-
-        alert('✅ Отправлено!'); cart = {}; switchTab('history');
+        list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join('');
     }
 
     function renderAdmin() {
-        let html = `<h3>Пользователи</h3>
-            <div class="admin-card">
-                <input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль">
-                <select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
-                <button class="btn-action" onclick="addUser()">Добавить сотрудника</button>
-            </div>`;
+        let html = `<h3>Пользователи</h3><div class="admin-card"><input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select><button class="btn-action" onclick="addUser()">Добавить</button></div>`;
         users.forEach((u, idx) => {
             let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет';
-            html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>
-                Машины: ${cars}<br>
-                <input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button>
-                <button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button>
-            </div>`;
+            html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>Машины: ${cars}<br><input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button><button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button></div>`;
         });
         return html;
     }
@@ -177,7 +191,7 @@
         const r = document.getElementById('newRole').value;
         if(l && p) { users.push({login: l, pass: p, role: r, assignedCars: []}); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     }
-    function addVin(idx) { const vin = document.getElementById('vin-' + idx).value; if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
+    function addVin(idx) { const vin = document.getElementById('vin-'+idx).value; if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function removeVin(uIdx, vIdx) { users[uIdx].assignedCars.splice(vIdx, 1); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     function deleteUser(log) { if(log !== '0666261351') { users = users.filter(u => u.login !== log); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); }
