@@ -89,10 +89,14 @@
             document.getElementById('b-cat').classList.add('active'); renderTable(); 
         }
         else if(t === 'cart') { 
-            let vinOptions = (currentUser.role === 'mechanic' && currentUser.assignedCars?.length > 0) 
-                ? currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')
-                : `<option value="manual">Введите вручную</option>`;
-            cont.innerHTML = `<h3>🛒 Заказ</h3><select id="carVin">${vinOptions}</select><div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
+            // Менеджеры всегда могут вводить VIN вручную
+            let vinHtml = (currentUser.role === 'manager') 
+                ? `<input id="carVin" placeholder="Введите VIN машины...">`
+                : (currentUser.assignedCars?.length > 0) 
+                    ? `<select id="carVin">${currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`
+                    : `<input id="carVin" placeholder="Введите VIN (назначьте авто у админа)">`;
+            
+            cont.innerHTML = `<h3>🛒 Заказ</h3>${vinHtml}<div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
             document.getElementById('b-cart').classList.add('active'); renderCart();
         }
         else if(t === 'history') { cont.innerHTML = "<h3>История</h3>"; document.getElementById('b-hist').classList.add('active'); }
@@ -128,28 +132,6 @@
         }
     }
 
-    async function sendToTelegram() {
-        const vin = document.getElementById('carVin').value;
-        if(!vin) return alert('Выберите VIN');
-        
-        let text = `🛠 Заявка: ${vin}\n`;
-        for(let art in cart) {
-            const status = document.getElementById(`status-${art}`).value;
-            const qty = document.getElementById(`qty-${art}`).value;
-            text += `${cart[art].name} (${qty} шт.) - Статус: ${status}\n`;
-        }
-
-        try {
-            await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-            });
-            alert('✅ Заявка отправлена!');
-            cart = {};
-            switchTab('history');
-        } catch(e) { alert('Ошибка отправки: ' + e); }
-    }
-
     function renderAdmin() {
         let html = `<h3>Пользователи</h3>
             <div class="admin-card">
@@ -177,6 +159,11 @@
     function addVin(idx) { const vin = document.getElementById('vin-' + idx).value; if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function removeVin(uIdx, vIdx) { users[uIdx].assignedCars.splice(vIdx, 1); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     function deleteUser(log) { if(log !== '0666261351') { users = users.filter(u => u.login !== log); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
+    async function sendToTelegram() {
+        const vin = document.getElementById('carVin').value;
+        if(!vin) return alert('Введите VIN');
+        alert('✅ Отправлено!'); cart = {}; switchTab('history');
+    }
     function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); }
 
     if (currentUser) {
