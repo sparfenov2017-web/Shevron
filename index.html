@@ -7,32 +7,27 @@
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        /* Сетка: лево - схема, право - контент */
         .sidebar { width: 350px; background: var(--panel); padding: 15px; border-right: 2px solid var(--accent); overflow-y: auto; }
         .content { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
         .image-container { position: relative; width: 100%; }
         .image-container img { width: 100%; border-radius: 8px; border: 2px solid #334155; }
-        .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); cursor: pointer; }
-
+        .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); cursor: pointer; }
         @media (max-width: 850px) { .sidebar { display: none; } }
-        
-        .tabs { display: flex; gap: 5px; }
-        .tab-btn { flex: 1; padding: 10px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        .tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); }
-        
+        .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; }
         input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
         .table-wrapper { flex: 1; overflow-y: auto; background: var(--panel); border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #334155; }
-        
+        .cart-item { background: #1e293b; padding: 10px; margin-bottom: 5px; border-radius: 6px; }
         .btn-action { background: #3b82f6; color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<!-- ЭКРАН ВХОДА -->
 <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:999; display:flex; justify-content:center; align-items:center;">
     <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px;">
         <h2>Вход</h2>
@@ -46,14 +41,14 @@
     <h3>Схема</h3>
     <div class="image-container">
         <img src="scheme.jpg" alt="Схема">
-        <!-- Hotspots -->
         <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
+        <a href="#" class="hotspot" onclick="filterByArea('suspension'); return false;" style="top: 80%; left: 45%; width: 15%; height: 10%;"></a>
     </div>
 </div>
 
 <div class="content">
     <div class="tabs">
-        <button class="tab-btn active" id="b1" onclick="switchTab('catalog')">📦 Каталог</button>
+        <button class="tab-btn" id="b1" onclick="switchTab('catalog')">📦 Каталог</button>
         <button class="tab-btn" id="b2" onclick="switchTab('cart')">🛒 Корзина</button>
         <button class="tab-btn" id="b3" onclick="switchTab('history')">📝 История</button>
         <button class="tab-btn" id="btn-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">⚙️ Админка</button>
@@ -62,33 +57,41 @@
     <div id="view-container"></div>
 </div>
 
-<script src="data.js"></script>
+<script src="data.js?v=9"></script>
 <script>
-    // ИНИЦИАЛИЗАЦИЯ
     let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager"}]');
     let currentUser = JSON.parse(localStorage.getItem('current_user'));
     let cart = {};
 
     function login() {
         const u = users.find(x => x.login === document.getElementById('inLogin').value && x.pass === document.getElementById('inPass').value);
-        if(u) { localStorage.setItem('current_user', JSON.stringify(u)); location.reload(); }
-        else alert("❌ Ошибка");
+        if(u) { localStorage.setItem('current_user', JSON.stringify(u)); location.reload(); } else alert("❌ Неверно");
     }
     function logout() { localStorage.removeItem('current_user'); location.reload(); }
 
     function switchTab(t) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         const cont = document.getElementById('view-container');
-        if(t === 'admin') cont.innerHTML = renderAdmin();
-        else if(t === 'catalog') { cont.innerHTML = `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:5px; margin-bottom:10px;"><input id="search" placeholder="Поиск..." onkeyup="renderTable()"><select id="fZone"><option value="all">Узел</option></select></div><div class="table-wrapper"><table><tbody id="tbody"></tbody></table></div>`; renderTable(); }
-        else if(t === 'cart') cont.innerHTML = `<input id="carVin" placeholder="VIN авто"><div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
-        else if(t === 'history') cont.innerHTML = "История";
+        if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('btn-admin').classList.add('active'); }
+        else if(t === 'catalog') { 
+            cont.innerHTML = `<div class="controls"><input id="search" placeholder="Поиск..." onkeyup="renderTable()">
+            <select id="fZone" onchange="renderTable()"><option value="all">Узел</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option></select>
+            <select id="fModel" onchange="renderTable()"><option value="all">Модель</option><option value="M998">M998</option><option value="M1151">M1151</option></select>
+            <select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option><option value="6.5">6.5</option></select></div>
+            <div class="table-wrapper"><table><tbody id="tbody"></tbody></table></div>`;
+            document.getElementById('b1').classList.add('active'); renderTable(); 
+        }
+        else if(t === 'cart') { cont.innerHTML = `<input id="carVin" placeholder="VIN авто"> <div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`; document.getElementById('b2').classList.add('active'); renderCart(); }
+        else if(t === 'history') { cont.innerHTML = "<h3>История</h3><div id='h-list'></div>"; document.getElementById('b3').classList.add('active'); renderHistory(); }
     }
 
     function renderTable() {
         const tbody = document.getElementById('tbody');
-        if(!tbody) return;
+        if(!tbody || typeof db === 'undefined') return;
+        const s = document.getElementById('search').value.toLowerCase();
+        const z = document.getElementById('fZone').value;
         tbody.innerHTML = '';
-        db.forEach(i => {
+        db.filter(i => (z==='all' || i.zone===z) && (i.name.toLowerCase().includes(s) || i.art.toLowerCase().includes(s))).forEach(i => {
             tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`;
         });
     }
@@ -99,14 +102,40 @@
         alert("Добавлено: " + art);
     }
 
+    function renderCart() {
+        const list = document.getElementById('cart-list');
+        list.innerHTML = '';
+        for(let art in cart) list.innerHTML += `<div class="cart-item">${cart[art].name} (${cart[art].qty})</div>`;
+    }
+
     function renderAdmin() {
         let html = `<h3>Пользователи</h3>`;
         users.forEach(u => html += `<div class="admin-card"><strong>${u.login}</strong> | ${u.role}</div>`);
-        html += `<input id="newLog" placeholder="Логин"><button class="btn-action" onclick="addUser()">Добавить</button>`;
+        html += `<input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><button class="btn-action" onclick="addUser()">Добавить</button>`;
         return html;
     }
 
-    // ЗАПУСК
+    function addUser() {
+        users.push({ login: document.getElementById('newLog').value, pass: document.getElementById('newPass').value, role: 'mechanic' });
+        localStorage.setItem('users', JSON.stringify(users));
+        switchTab('admin');
+    }
+
+    async function sendToTelegram() {
+        const vin = document.getElementById('carVin').value;
+        if(!vin) return alert('Введите VIN');
+        let text = `🛠 Заявка: ${vin}\n`;
+        for(let art in cart) text += `${cart[art].name} - ${cart[art].qty} шт.\n`;
+        await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
+        });
+        alert('Отправлено!'); cart = {}; switchTab('history');
+    }
+
+    function filterByArea(z) { document.getElementById('fZone').value = z; renderTable(); }
+    function renderHistory() { document.getElementById('h-list').innerHTML = "Пока пусто"; }
+
     if (currentUser) {
         document.getElementById('login-screen').style.display = 'none';
         if (currentUser.role === 'manager') document.getElementById('btn-admin').style.display = 'block';
