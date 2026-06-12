@@ -66,7 +66,7 @@
 <body>
 
 <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px;">
-    <h2 style="color:#f1f5f9; text-align:center;">Вход в систему СТО<br><span style="font-size: 14px; color: #3b82f6;">(Версия 4.1 - Исправление фото)</span></h2>
+    <h2 style="color:#f1f5f9; text-align:center;">Вход в систему СТО<br><span style="font-size: 14px; color: #3b82f6;">(Версия 4.2 - Фото API)</span></h2>
     <input type="password" id="passwordInput" placeholder="Введите пароль" style="padding:15px; width:250px; border-radius:8px; border:1px solid #3b82f6; background:#1e293b; color:white;">
     <button onclick="checkPassword()" style="padding:15px 40px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Войти</button>
 </div>
@@ -119,9 +119,8 @@
     </div>
 </div>
 
-<script src="data.js?v=5"></script>
+<script src="data.js?v=6"></script>
 <script>
-    // Программное удаление боковой панели на мобильных устройствах
     if (window.innerWidth <= 850) { 
         const sb = document.getElementById('sidebar');
         if (sb) sb.remove(); 
@@ -198,7 +197,6 @@
         }
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ С РЕЖИМОМ HTML И ОБРАБОТКОЙ ОШИБОК
     async function sendToTelegram() {
         const vin = document.getElementById('carVin').value || "Не указан";
         const btn = document.getElementById('btn-tg');
@@ -218,7 +216,8 @@
                 const formData = new FormData();
                 formData.append('image', fileInput.files[0]);
                 try {
-                    const resp = await fetch('https://api.imgbb.com/1/upload?key=6d3c01c0f8b8e01869804b46c63d59e9', { method: 'POST', body: formData });
+                    // ЗДЕСЬ УЖЕ СТОИТ ТВОЙ КЛЮЧ
+                    const resp = await fetch('https://api.imgbb.com/1/upload?key=c5e657d3acfab10ff2d699a1bb8551b6', { method: 'POST', body: formData });
                     const res = await resp.json();
                     if (res.success) {
                         photoLink = `\n📸 <b>Фото:</b> ${res.data.url}`;
