@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>СТО Система</title>
+    <title>СТО Система - Управление</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
@@ -12,7 +12,6 @@
         .image-container { position: relative; width: 100%; }
         .image-container img { width: 100%; border-radius: 8px; border: 2px solid #334155; }
         .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); cursor: pointer; }
-        @media (max-width: 850px) { .sidebar { display: none; } }
         .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
         .tab-btn { padding: 10px 15px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); }
@@ -22,8 +21,10 @@
         table { width: 100%; border-collapse: collapse; }
         th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #334155; }
+        .cart-item { background: #1e293b; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; }
+        .status-select { background: #334155; color: white; padding: 8px; border-radius: 4px; width: 100%; margin-top: 5px; }
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
         .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
-        .btn-action { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
         .vin-tag { background: #3b82f6; padding: 3px 8px; border-radius: 4px; margin-right: 5px; display: inline-block; margin-top: 5px; }
     </style>
 </head>
@@ -34,7 +35,7 @@
         <h2>Вход</h2>
         <input type="text" id="inLogin" placeholder="Логин" style="width:100%; margin-bottom:10px;">
         <input type="password" id="inPass" placeholder="Пароль" style="width:100%;">
-        <button onclick="login()" class="btn-action" style="width:100%; margin-top:15px;">Войти</button>
+        <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
     </div>
 </div>
 
@@ -61,6 +62,7 @@
 <script src="data.js"></script>
 <script>
     let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager", "assignedCars": []}]');
+    if (!users.find(u => u.login === '0666261351')) users.push({login: '0666261351', pass: 'Saranskaya59', role: 'manager', assignedCars: []});
     let currentUser = JSON.parse(localStorage.getItem('current_user'));
     let cart = {};
 
@@ -80,7 +82,7 @@
                 <input id="search" placeholder="Поиск..." onkeyup="renderTable()">
                 <select id="fZone" onchange="renderTable()"><option value="all">Узел</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option></select>
                 <select id="fModel" onchange="renderTable()"><option value="all">Модель</option><option value="M998">M998</option><option value="M1151">M1151</option></select>
-                <select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option><option value="6.5">6.5</option><option value="6.5t">6.5 Turbo</option></select>
+                <select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option><option value="6.5">6.5</option></select>
             </div>
             <div class="table-wrapper"><table><thead><tr><th>+</th><th>Арт</th><th>Название</th></tr></thead><tbody id="tbody"></tbody></table></div>`;
             document.getElementById('b1').classList.add('active'); renderTable(); 
@@ -89,19 +91,46 @@
             let vinOptions = (currentUser.role === 'mechanic' && currentUser.assignedCars?.length > 0) 
                 ? currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')
                 : `<option value="manual">Введите вручную</option>`;
-            cont.innerHTML = `<h3>🛒 Заказ</h3><select id="carVin">${vinOptions}</select><input id="manualVin" placeholder="Или введите VIN" style="display:none;"><div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
+            cont.innerHTML = `<h3>🛒 Заказ</h3><select id="carVin">${vinOptions}</select><input id="manualVin" placeholder="VIN..." style="display:none;"><div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
             document.getElementById('b2').classList.add('active'); renderCart();
         }
         else if(t === 'history') { cont.innerHTML = "<h3>История</h3>"; document.getElementById('b3').classList.add('active'); }
     }
 
+    function renderTable() {
+        const tbody = document.getElementById('tbody');
+        if(!tbody || typeof db === 'undefined') return;
+        const s = document.getElementById('search').value.toLowerCase();
+        const z = document.getElementById('fZone').value;
+        tbody.innerHTML = '';
+        db.filter(i => (z==='all'||i.zone===z) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
+        .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
+    }
+
+    function addToCart(art) {
+        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
+        else cart[art].qty++;
+        alert("Добавлено");
+    }
+
+    function renderCart() {
+        const list = document.getElementById('cart-list');
+        list.innerHTML = '';
+        for(let art in cart) {
+            list.innerHTML += `<div class="cart-item">
+                <strong>${cart[art].name}</strong> (${cart[art].art})<br>
+                <select class="status-select"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select>
+                <input type="number" value="${cart[art].qty}" style="width:50px;">
+                <input type="file" accept="image/*" style="width:100%; margin-top:5px;">
+            </div>`;
+        }
+    }
+
     function renderAdmin() {
         let html = `<h3>Пользователи</h3>
             <div class="admin-card">
-                <input id="newLog" placeholder="Логин">
-                <input id="newPass" placeholder="Пароль">
-                <select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
-                <button class="btn-action" onclick="addUser()">Добавить сотрудника</button>
+                <input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль">
+                <button class="btn-action" onclick="addUser()">Добавить</button>
             </div>`;
         users.forEach((u, idx) => {
             let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет';
@@ -115,74 +144,23 @@
     }
 
     function addUser() {
-        const login = document.getElementById('newLog').value;
-        const pass = document.getElementById('newPass').value;
-        const role = document.getElementById('newRole').value;
-        if(login && pass) {
-            users.push({ login, pass, role, assignedCars: [] });
-            localStorage.setItem('users', JSON.stringify(users));
-            switchTab('admin');
-        } else alert("Заполните логин и пароль");
+        const l = document.getElementById('newLog').value;
+        const p = document.getElementById('newPass').value;
+        if(l && p) { users.push({login: l, pass: p, role: 'mechanic', assignedCars: []}); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     }
 
     function addVin(idx) {
         const vin = document.getElementById('vin-' + idx).value;
-        if(!vin) return;
-        if(!users[idx].assignedCars) users[idx].assignedCars = [];
-        users[idx].assignedCars.push(vin);
-        localStorage.setItem('users', JSON.stringify(users));
-        switchTab('admin');
+        if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     }
 
-    function removeVin(uIdx, vIdx) {
-        users[uIdx].assignedCars.splice(vIdx, 1);
-        localStorage.setItem('users', JSON.stringify(users));
-        switchTab('admin');
-    }
-
-    function deleteUser(log) {
-        if(log === '0666261351') return;
-        users = users.filter(u => u.login !== log);
-        localStorage.setItem('users', JSON.stringify(users));
-        switchTab('admin');
-    }
-
-    function renderTable() {
-        const tbody = document.getElementById('tbody');
-        if(!tbody || typeof db === 'undefined') return;
-        const s = document.getElementById('search').value.toLowerCase();
-        const z = document.getElementById('fZone').value;
-        const m = document.getElementById('fModel').value;
-        const e = document.getElementById('fEngine').value;
-        tbody.innerHTML = '';
-        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
-        .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
-    }
-
-    function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); renderTable(); }
-
-    function addToCart(art) {
-        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
-        else cart[art].qty++;
-        alert("Добавлено: " + art);
-    }
-
-    function renderCart() {
-        const list = document.getElementById('cart-list');
-        list.innerHTML = '';
-        for(let art in cart) list.innerHTML += `<div class="cart-item">${cart[art].name} (${cart[art].qty})</div>`;
-    }
+    function removeVin(uIdx, vIdx) { users[uIdx].assignedCars.splice(vIdx, 1); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
+    function deleteUser(log) { if(log !== '0666261351') { users = users.filter(u => u.login !== log); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
 
     async function sendToTelegram() {
         const vin = document.getElementById('carVin').value;
-        if(!vin) return alert('Выберите VIN');
-        let text = `🛠 Заявка: ${vin}\n`;
-        for(let art in cart) text += `${cart[art].name} - ${cart[art].qty} шт.\n`;
-        await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-        });
-        alert('✅ Отправлено!'); cart = {}; switchTab('history');
+        if(!vin) return alert('Введите VIN');
+        alert('Отправлено!'); cart = {}; switchTab('history');
     }
 
     if (currentUser) {
