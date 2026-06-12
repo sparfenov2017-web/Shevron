@@ -12,6 +12,7 @@
         .image-container { position: relative; width: 100%; }
         .image-container img { width: 100%; border-radius: 8px; border: 2px solid #334155; }
         .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); cursor: pointer; }
+        @media (max-width: 850px) { .sidebar { display: none; } }
         .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
         .tab-btn { padding: 10px 15px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); }
@@ -22,7 +23,7 @@
         th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
         td { padding: 8px; border-bottom: 1px solid #334155; }
         .cart-item { background: #1e293b; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; }
-        .btn-action { background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
         .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
         .vin-tag { background: #3b82f6; padding: 3px 8px; border-radius: 4px; margin-right: 5px; display: inline-block; margin-top: 5px; }
     </style>
@@ -34,7 +35,7 @@
         <h2>Вход</h2>
         <input type="text" id="inLogin" placeholder="Логин" style="width:100%; margin-bottom:10px;">
         <input type="password" id="inPass" placeholder="Пароль" style="width:100%;">
-        <button onclick="login()" class="btn-action" style="width:100%; margin-top:15px;">Войти</button>
+        <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
     </div>
 </div>
 
@@ -60,7 +61,6 @@
 
 <script src="data.js"></script>
 <script>
-    // Инициализация
     let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager", "assignedCars": []}]');
     if (!users.find(u => u.login === '0666261351')) users.push({login: '0666261351', pass: 'Saranskaya59', role: 'manager', assignedCars: []});
     localStorage.setItem('users', JSON.stringify(users));
@@ -110,12 +110,52 @@
         .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; });
     }
 
+    function addToCart(art) {
+        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
+        else cart[art].qty++;
+        alert("Добавлено");
+    }
+
+    function renderCart() {
+        const list = document.getElementById('cart-list');
+        list.innerHTML = '';
+        for(let art in cart) {
+            list.innerHTML += `<div class="cart-item">
+                <strong>${cart[art].name}</strong> (${cart[art].art})<br>
+                <select class="status-select" id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select>
+                <input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;">
+            </div>`;
+        }
+    }
+
+    async function sendToTelegram() {
+        const vin = document.getElementById('carVin').value;
+        if(!vin) return alert('Выберите VIN');
+        
+        let text = `🛠 Заявка: ${vin}\n`;
+        for(let art in cart) {
+            const status = document.getElementById(`status-${art}`).value;
+            const qty = document.getElementById(`qty-${art}`).value;
+            text += `${cart[art].name} (${qty} шт.) - Статус: ${status}\n`;
+        }
+
+        try {
+            await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
+            });
+            alert('✅ Заявка отправлена!');
+            cart = {};
+            switchTab('history');
+        } catch(e) { alert('Ошибка отправки: ' + e); }
+    }
+
     function renderAdmin() {
         let html = `<h3>Пользователи</h3>
             <div class="admin-card">
                 <input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль">
                 <select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
-                <button class="btn-action" onclick="addUser()">Добавить</button>
+                <button class="btn-action" onclick="addUser()">Добавить сотрудника</button>
             </div>`;
         users.forEach((u, idx) => {
             let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет';
@@ -137,9 +177,6 @@
     function addVin(idx) { const vin = document.getElementById('vin-' + idx).value; if(vin) { users[idx].assignedCars.push(vin); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
     function removeVin(uIdx, vIdx) { users[uIdx].assignedCars.splice(vIdx, 1); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); }
     function deleteUser(log) { if(log !== '0666261351') { users = users.filter(u => u.login !== log); localStorage.setItem('users', JSON.stringify(users)); switchTab('admin'); } }
-    function addToCart(art) { if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 }; else cart[art].qty++; alert("Добавлено"); }
-    function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; for(let art in cart) list.innerHTML += `<div class="cart-item"><strong>${cart[art].name}</strong><br><select class="status-select"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select><input type="number" value="${cart[art].qty}" style="width:50px;"></div>`; }
-    async function sendToTelegram() { const vin = document.getElementById('carVin').value; if(!vin) return alert('Введите VIN'); alert('✅ Отправлено!'); cart = {}; switchTab('history'); }
     function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); }
 
     if (currentUser) {
