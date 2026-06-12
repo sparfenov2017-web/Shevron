@@ -3,329 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" href="icon.png">
-    <link rel="manifest" href="manifest.json">
-    <title>СТО Каталог - База HMMWV</title>
+    <title>СТО Система Управления</title>
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
-
-        .sidebar { width: 45%; background: var(--panel); padding: 20px; border-right: 2px solid var(--accent); overflow-y: auto; display: flex; flex-direction: column; }
-        .image-container { position: relative; display: inline-block; width: 100%; }
-        .image-container img { display: block; width: 100%; border-radius: 8px; border: 2px solid #334155; }
-        .content { width: 55%; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-
-        /* БЛОКИРОВКА КАРТИНКИ ДЛЯ МОБИЛЬНЫХ */
-        @media screen and (max-width: 850px) {
-            .sidebar { display: none !important; opacity: 0 !important; visibility: hidden !important; width: 0 !important; }
-            .content { width: 100% !important; padding: 10px !important; }
-        }
-
-        .hotspot { position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: 0.3s; }
-        .hotspot:hover { border: 2px solid var(--accent); background: rgba(59, 130, 246, 0.3); }
+        .content { width: 100%; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
         
-        /* Вкладки (теперь их 3) */
-        .tabs { display: flex; gap: 8px; margin-bottom: 5px; }
-        .tab-btn { flex: 1; padding: 12px 5px; background: #334155; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.3s; white-space: nowrap; text-align: center; }
+        /* Табы и интерфейс */
+        .tabs { display: flex; gap: 8px; margin-bottom: 5px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 15px; background: #334155; color: #94a3b8; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); color: white; }
-        .cart-badge { background: #ef4444; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 4px; display: none; }
-
-        /* Контролы каталога (убрали VIN отсюда) */
-        .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-        @media screen and (max-width: 850px) {
-            .controls { grid-template-columns: 1fr 1fr; }
-            #search { grid-column: span 2; }
-        }
-
+        
         input, select { padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; width: 100%; box-sizing: border-box; }
-        .table-wrapper { flex: 1; overflow-y: auto; border-radius: 8px; border: 1px solid #334155; background: var(--panel); }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #334155; padding: 12px; position: sticky; top: 0; text-align: left; z-index: 10; font-size: 14px; }
-        td { padding: 10px; border-bottom: 1px solid #334155; font-size: 14px; }
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
         
-        /* Корзина */
-        .cart-item { background: #1e293b; padding: 12px; margin-bottom: 10px; border-radius: 8px; color: #fff; border: 1px solid #334155; }
-        .status-select { background: #334155; color: white; border: none; padding: 8px; border-radius: 4px; font-size: 13px; margin: 8px 0; display: block; width: 100%; }
-        .cart-qty { width: 60px; padding: 8px; background: #fff; color: #000; font-weight: bold; border-radius: 4px; text-align: center; }
-        .photo-input { margin: 5px 0; font-size: 12px; width: 100%; }
-        
-        .btn-add { background: #10b981; color: white; border: none; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        .btn-add:active { transform: scale(0.95); }
-        .btn-remove { background: #ef4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
-        .btn-tg { background: #0088cc; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 15px; margin-top: 10px; width: 100%; }
-
-        .history-card { background: #1e293b; border-left: 4px solid var(--accent); padding: 15px; border-radius: 6px; margin-bottom: 10px; }
-        .history-card h4 { margin: 0 0 10px 0; color: #3b82f6; }
-        .history-item { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid #334155; }
-        
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
-        .badge.in-stock { background: #10b981; color: #000; }
-        .badge.ordered { background: #f59e0b; color: #000; }
-        .badge.no-stock { background: #ef4444; color: #fff; }
-        .badge.unknown { background: #475569; color: #fff; }
+        /* Админ стили */
+        .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        .badge-role { font-size: 10px; background: #475569; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
-<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px;">
-    <h2 style="color:#f1f5f9; text-align:center;">Вход в систему СТО<br><span style="font-size: 14px; color: #3b82f6;">(Версия 5.0 - Отдельная корзина)</span></h2>
-    <input type="password" id="passwordInput" placeholder="Введите пароль" style="padding:15px; width:250px; border-radius:8px; border:1px solid #3b82f6; background:#1e293b; color:white;">
-    <button onclick="checkPassword()" style="padding:15px 40px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Войти</button>
-</div>
-
-<div class="sidebar" id="sidebar">
-    <h2>Техническая схема</h2>
-    <div class="image-container">
-        <img src="scheme.jpg" alt="Схема">
-        <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
-        <a href="#" class="hotspot" onclick="filterByArea('suspension'); return false;" style="top: 80%; left: 45%; width: 15%; height: 10%;"></a>
-        <a href="#" class="hotspot" onclick="filterByArea('electric'); return false;" style="top: 57%; left: 2%; width: 15%; height: 10%;"></a>
-        <a href="#" class="hotspot" onclick="filterByArea('body'); return false;" style="top: 45%; left: 10%; width: 60%; height: 25%;"></a>
+<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:10000; display:flex; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px;">
+        <h2 style="color:white; margin-top:0;">Авторизация</h2>
+        <input type="text" id="inLogin" placeholder="Логин">
+        <input type="password" id="inPass" placeholder="Пароль" style="margin-top:10px;">
+        <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
     </div>
 </div>
 
 <div class="content">
-    <div class="tabs">
-        <button class="tab-btn active" id="btn-catalog" onclick="switchTab('catalog')">📦 Каталог</button>
-        <button class="tab-btn" id="btn-cart" onclick="switchTab('cart')">🛒 Корзина <span class="cart-badge" id="cart-badge">0</span></button>
-        <button class="tab-btn" id="btn-history" onclick="switchTab('history')">📝 История</button>
+    <div class="tabs" id="main-tabs">
+        <button class="tab-btn active" onclick="switchTab('catalog')">📦 Каталог</button>
+        <button class="tab-btn" onclick="switchTab('cart')">🛒 Корзина</button>
+        <button class="tab-btn" onclick="switchTab('history')">📝 История</button>
+        <button class="tab-btn" id="admin-tab-btn" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">⚙️ Управление</button>
+        <button class="tab-btn" onclick="logout()" style="background:#ef4444;">🚪</button>
     </div>
 
-    <!-- ВКЛАДКА: КАТАЛОГ -->
-    <div id="tab-catalog" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
-        <div class="controls">
-            <input type="text" id="search" placeholder="Поиск запчасти..." onkeyup="render()">
-            <select id="fZone" onchange="render()"><option value="all">Узел (Все)</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option><option value="brakes">Тормоза</option><option value="transmission">Трансмиссия</option><option value="steering">Рулевое</option><option value="electric">Электрика</option><option value="body">Кузов</option></select>
-            <select id="fModel" onchange="render()"><option value="all">Модель (Все)</option><option value="M998">M998</option><option value="M1151">M1151</option><option value="Bogdana">Bogdana</option></select>
-            <select id="fEngine" onchange="render()"><option value="all">ДВС (Все)</option><option value="6.2">6.2</option><option value="6.5">6.5</option><option value="6.5t">6.5 Turbo</option></select>
-        </div>
-        <div class="table-wrapper">
-            <table>
-                <thead><tr><th style="width:40px;">+</th><th>Артикул</th><th>Наименование</th><th>Наличие</th></tr></thead>
-                <tbody id="tbody"></tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- ВКЛАДКА: КОРЗИНА (НОВАЯ) -->
-    <div id="tab-cart" style="display: none; flex-direction: column; flex: 1; overflow-y: auto;">
-        <h3 style="margin-top: 0; color: #3b82f6;">🛒 Оформление заявки</h3>
-        
-        <!-- VIN перенесен сюда, перед отправкой -->
-        <input type="text" id="carVin" placeholder="Укажите VIN авто (Обязательно)" style="border: 2px solid #3b82f6; margin-bottom: 15px; background: #1e293b;">
-        
-        <div id="cart-items" style="flex: 1;"></div>
-        
-        <p id="empty-cart-msg" style="color:#94a3b8; text-align:center; margin-top: 50px;">В корзине пока пусто.<br>Добавьте запчасти из каталога.</p>
-        
-        <button class="btn-tg" id="btn-tg" onclick="sendToTelegram()" style="display: none;">Отправить администратору</button>
-    </div>
-
-    <!-- ВКЛАДКА: ИСТОРИЯ -->
-    <div id="tab-history" style="display: none; flex-direction: column; flex: 1; overflow-y: auto;">
-        <h3 style="margin-top: 0;">Ваши отправленные заявки</h3>
-        <div id="history-container"></div>
-    </div>
+    <div id="view-container"></div>
 </div>
 
-<script src="data.js?v=7"></script>
+<script src="data.js"></script>
 <script>
-    if (window.innerWidth <= 850) { 
-        const sb = document.getElementById('sidebar');
-        if (sb) sb.remove(); 
+    // 1. Инициализация пользователей
+    if (!localStorage.getItem('users')) {
+        localStorage.setItem('users', JSON.stringify([{login: 'admin', pass: 'admin', role: 'manager'}]));
     }
 
-    function checkPassword() {
-        if (document.getElementById('passwordInput').value === 'Saranskaya59') {
-            document.getElementById('login-screen').style.display = 'none';
-            renderHistory();
-        } else { alert('❌ Неверный пароль!'); }
+    let currentUser = JSON.parse(localStorage.getItem('current_user'));
+
+    function login() {
+        const users = JSON.parse(localStorage.getItem('users'));
+        const l = document.getElementById('inLogin').value;
+        const p = document.getElementById('inPass').value;
+        const user = users.find(u => u.login === l && u.pass === p);
+        if(user) {
+            localStorage.setItem('current_user', JSON.stringify(user));
+            location.reload();
+        } else { alert("Неверно!"); }
     }
 
-    function switchTab(tabId) {
-        document.getElementById('tab-catalog').style.display = (tabId === 'catalog') ? 'flex' : 'none';
-        document.getElementById('tab-cart').style.display = (tabId === 'cart') ? 'flex' : 'none';
-        document.getElementById('tab-history').style.display = (tabId === 'history') ? 'flex' : 'none';
-        
-        document.getElementById('btn-catalog').classList.toggle('active', tabId === 'catalog');
-        document.getElementById('btn-cart').classList.toggle('active', tabId === 'cart');
-        document.getElementById('btn-history').classList.toggle('active', tabId === 'history');
-        
-        if(tabId === 'history') renderHistory();
-    }
+    function logout() { localStorage.removeItem('current_user'); location.reload(); }
 
-    let cart = {};
-    
-    function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); render(); }
-    
-    function render() {
-        const z = document.getElementById('fZone').value, m = document.getElementById('fModel').value, e = document.getElementById('fEngine').value, s = document.getElementById('search').value.toLowerCase();
-        const tbody = document.getElementById('tbody'); tbody.innerHTML = '';
-        if(typeof db === 'undefined') return;
-        
-        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m||i.model==='all') && (e==='all'||i.engine===e||i.engine==='all') && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
-        .forEach(i => { 
-            let badgeClass = 'unknown'; let badgeText = 'Уточнять';
-            if(i.stock === 'in_stock') { badgeClass = 'in-stock'; badgeText = 'На складе'; }
-            else if(i.stock === 'ordered') { badgeClass = 'ordered'; badgeText = 'Заказано'; }
-            else if(i.stock === 'out_of_stock') { badgeClass = 'no-stock'; badgeText = 'Нет в наличии'; }
-
-            tbody.innerHTML += `
-            <tr>
-                <td><button class="btn-add" onclick="addToCart('${i.art.replace(/'/g, "\\'")}')">➕</button></td>
-                <td><code>${i.art}</code></td>
-                <td>${i.name}</td>
-                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-            </tr>`; 
+    // 2. Рендер Админки
+    function renderAdmin() {
+        const users = JSON.parse(localStorage.getItem('users'));
+        let html = `<h3>Пользователи</h3>`;
+        users.forEach(u => {
+            html += `<div class="admin-card">
+                <strong>${u.login}</strong> <span class="badge-role">${u.role}</span>
+                <button onclick="deleteUser('${u.login}')" style="background:none; border:none; color:red; cursor:pointer; float:right;">✕</button>
+            </div>`;
         });
+        html += `<h3>Добавить сотрудника</h3>
+                 <input id="newLog" placeholder="Логин">
+                 <input id="newPass" placeholder="Пароль" style="margin-top:5px;">
+                 <select id="newRole" style="margin-top:5px;"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select>
+                 <button onclick="addUser()" class="btn-action" style="margin-top:10px;">Создать</button>`;
+        return html;
     }
 
-    function addToCart(art) {
-        if (cart[art]) cart[art].qty += 1;
-        else { const item = db.find(i => i.art === art); cart[art] = { name: item.name, art: item.art, qty: 1 }; }
-        updateCartUI();
-        
-        // Визуальная подсказка о добавлении
-        const btnCart = document.getElementById('btn-cart');
-        btnCart.style.transform = 'scale(1.1)';
-        setTimeout(() => btnCart.style.transform = 'scale(1)', 200);
+    function addUser() {
+        const users = JSON.parse(localStorage.getItem('users'));
+        users.push({ login: document.getElementById('newLog').value, pass: document.getElementById('newPass').value, role: document.getElementById('newRole').value });
+        localStorage.setItem('users', JSON.stringify(users));
+        switchTab('admin');
     }
 
-    function updateQty(art, qty) { 
-        if (qty <= 0) delete cart[art]; 
-        else cart[art].qty = parseInt(qty); 
-        updateCartUI(); 
+    function deleteUser(log) {
+        let users = JSON.parse(localStorage.getItem('users'));
+        users = users.filter(u => u.login !== log);
+        localStorage.setItem('users', JSON.stringify(users));
+        switchTab('admin');
     }
 
-    function updateCartUI() {
-        const div = document.getElementById('cart-items');
-        const emptyMsg = document.getElementById('empty-cart-msg');
-        const btnTg = document.getElementById('btn-tg');
-        const badge = document.getElementById('cart-badge');
-        
-        const keys = Object.keys(cart);
-        
-        // Обновляем бейдж на вкладке
-        if (keys.length > 0) {
-            badge.style.display = 'inline-block';
-            badge.innerText = keys.length;
-            emptyMsg.style.display = 'none';
-            btnTg.style.display = 'block';
-        } else {
-            badge.style.display = 'none';
-            emptyMsg.style.display = 'block';
-            btnTg.style.display = 'none';
-        }
-
-        div.innerHTML = '';
-        for (let art in cart) {
-            div.innerHTML += `
-                <div class="cart-item" id="item-${art.replace(/\W/g, '')}">
-                    <div style="margin-bottom: 5px;"><strong>${cart[art].name}</strong><br><code style="color:#94a3b8">${cart[art].art}</code></div>
-                    <select class="status-select">
-                        <option value="Новая деталь">Новая деталь</option>
-                        <option value="В ремонт (снято)">В ремонт (снято)</option>
-                        <option value="С ремонта (установлено)">С ремонта (установлено)</option>
-                    </select>
-                    <div style="display:flex; gap:10px; align-items:center; margin-top: 10px;">
-                        <input class="cart-qty" type="number" value="${cart[art].qty}" onchange="updateQty('${art.replace(/'/g, "\\'")}', this.value)">
-                        <input type="file" class="photo-input" accept="image/*">
-                        <button class="btn-remove" onclick="updateQty('${art.replace(/'/g, "\\'")}', 0)">✕</button>
-                    </div>
-                </div>`;
-        }
+    // 3. Запуск интерфейса
+    if (currentUser) {
+        document.getElementById('login-screen').style.display = 'none';
+        if (currentUser.role === 'manager') document.getElementById('admin-tab-btn').style.display = 'block';
+        switchTab('catalog');
     }
 
-    async function sendToTelegram() {
-        const vin = document.getElementById('carVin').value.trim();
-        if(!vin) {
-            alert('❌ Пожалуйста, укажите VIN авто перед отправкой!');
-            document.getElementById('carVin').focus();
-            return;
-        }
-
-        const btn = document.getElementById('btn-tg');
-        btn.innerHTML = "⏳ Обработка..."; btn.disabled = true;
-        
-        let text = `🛠 <b>Новая заявка</b>\n🚗 <b>VIN:</b> <code>${vin}</code>\n\n`;
-        let historyOrder = { date: new Date().toLocaleString(), vin: vin, items: [] };
-        
-        for (let art in cart) {
-            const itemEl = document.getElementById(`item-${art.replace(/\W/g, '')}`);
-            const status = itemEl.querySelector('.status-select').value;
-            const fileInput = itemEl.querySelector('.photo-input');
-            let photoLink = "";
-            
-            if (fileInput.files.length > 0) {
-                btn.innerHTML = "⏳ Загрузка фото...";
-                const formData = new FormData();
-                formData.append('image', fileInput.files[0]);
-                try {
-                    const resp = await fetch('https://api.imgbb.com/1/upload?key=c5e657d3acfab10ff2d699a1bb8551b6', { method: 'POST', body: formData });
-                    const res = await resp.json();
-                    if (res.success) {
-                        photoLink = `\n📸 <b>Фото:</b> ${res.data.url}`;
-                    } else {
-                        photoLink = `\n⚠️ <b>Ошибка фото:</b> ${res.error.message}`;
-                    }
-                } catch(e) { 
-                    photoLink = `\n⚠️ <b>Ошибка сети при загрузке фото</b>`; 
-                }
-            }
-            
-            text += `• ${cart[art].name} (${cart[art].art})\n  Кол-во: ${cart[art].qty} | Статус: <b>${status}</b>${photoLink}\n\n`;
-            historyOrder.items.push({ name: cart[art].name, art: cart[art].art, qty: cart[art].qty, operation: status });
-        }
-
-        try {
-            const tgResp = await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-            });
-            
-            const tgData = await tgResp.json();
-            
-            if (tgResp.ok && tgData.ok) {
-                let orders = JSON.parse(localStorage.getItem('sto_orders_v1') || '[]');
-                orders.unshift(historyOrder);
-                if (orders.length > 20) orders.pop();
-                localStorage.setItem('sto_orders_v1', JSON.stringify(orders));
-
-                alert('✅ Заявка успешно отправлена!');
-                cart = {}; 
-                updateCartUI();
-                document.getElementById('carVin').value = ''; // Очищаем VIN после успешной отправки
-                switchTab('history'); // Автоматически перекидываем в историю
-            } else {
-                alert('❌ Ошибка Telegram: ' + (tgData.description || 'Неизвестный сбой'));
-            }
-        } catch(err) {
-            alert('❌ Проблема с сетью при отправке');
-        }
-
-        btn.innerHTML = "Отправить администратору"; btn.disabled = false;
+    function switchTab(t) {
+        const cont = document.getElementById('view-container');
+        if(t === 'admin') cont.innerHTML = renderAdmin();
+        else if(t === 'catalog') cont.innerHTML = "Здесь будет твой каталог (код из прошлых версий)";
+        // ... (сюда переносишь логику рендера из прошлых версий для других табов)
     }
-
-    function renderHistory() {
-        const container = document.getElementById('history-container');
-        const orders = JSON.parse(localStorage.getItem('sto_orders_v1') || '[]');
-        if (orders.length === 0) { container.innerHTML = '<p style="color:#94a3b8; text-align:center;">У вас пока нет отправленных заявок.</p>'; return; }
-
-        container.innerHTML = '';
-        orders.forEach(order => {
-            let itemsHtml = '';
-            order.items.forEach(item => {
-                itemsHtml += `
-                <div class="history-item">
-                    <span style="flex:1;">${item.name} <br><code style="color:#94a3b8">${item.art}</code></span>
-                    <span style="text-align:right;">${item.qty} шт.<br><span style="color:#3b82f6; font-size:11px;">${item.operation}</span></span>
-                </div>`;
-            });
-            container.innerHTML += `<div class="history-card"><h4>VIN: ${order.vin}</h4><p style="font-size:12px; color:#94a3b8; margin: -5px 0 10px 0;">📅 ${order.date}</p>${itemsHtml}</div>`;
-        });
-    }
-    
-    window.onload = () => { render(); updateCartUI(); };
 </script>
 </body>
 </html>
