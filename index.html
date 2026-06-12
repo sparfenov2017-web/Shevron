@@ -2,6 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     <title>СТО Каталог - База HMMWV</title>
@@ -22,6 +23,13 @@
         .hotspot { position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.05); cursor: pointer; transition: 0.3s; }
         .hotspot:hover { border: 2px solid var(--accent); background: rgba(59, 130, 246, 0.3); }
         .controls { display: grid; grid-template-columns: 1fr 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        
+        /* Мобильная адаптация для шапки */
+        @media (max-width: 850px) {
+            .controls { grid-template-columns: 1fr 1fr; }
+            #carVin, #search { grid-column: span 2; }
+        }
+
         input, select { padding: 12px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
         .table-wrapper { flex: 1; overflow-y: auto; border-radius: 8px; border: 1px solid #334155; background: var(--panel); }
         table { width: 100%; border-collapse: collapse; }
@@ -29,10 +37,10 @@
         td { padding: 10px; border-bottom: 1px solid #334155; }
         
         .cart-panel { background: #0f172a; border: 2px solid var(--accent); border-radius: 8px; padding: 15px; display: flex; flex-direction: column; flex-shrink: 0; }
-        .cart-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; color: #fff; display: flex; flex-direction: column; gap: 5px; }
-        .status-select { background: #334155; color: white; border: none; padding: 5px; border-radius: 4px; font-size: 12px; width: 100%; }
-        .cart-qty { width: 60px; padding: 5px; background: #fff; color: #000; font-weight: bold; border-radius: 4px; }
-        .photo-input { font-size: 10px; width: 100%; }
+        .cart-item { background: #1e293b; padding: 10px; margin-bottom: 8px; border-radius: 6px; color: #fff; }
+        .status-select { background: #334155; color: white; border: none; padding: 5px; border-radius: 4px; font-size: 12px; margin: 5px 0; display: block; width: 100%; }
+        .cart-qty { width: 50px; padding: 5px; background: #fff; color: #000; font-weight: bold; border-radius: 4px; }
+        .photo-input { margin: 5px 0; font-size: 10px; display: block; }
         .btn-add { background: #10b981; color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
         .btn-remove { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
         .btn-tg { background: #0088cc; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
@@ -41,13 +49,13 @@
 <body>
 
 <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:10000; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:20px;">
-    <h2>Вход в систему СТО</h2>
+    <h2 style="color:#f1f5f9;">Вход в систему СТО</h2>
     <input type="password" id="passwordInput" placeholder="Введите пароль" style="padding:15px; width:250px; border-radius:8px; border:1px solid #3b82f6; background:#1e293b; color:white;">
     <button onclick="checkPassword()" style="padding:15px 40px; background:#3b82f6; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Войти</button>
 </div>
 
 <div class="sidebar" id="sidebar">
-    <h2>Техническая схема</h2>
+    <h2 style="margin-top:0">Техническая схема</h2>
     <div class="image-container">
         <img src="scheme.jpg" alt="Схема">
         <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
@@ -71,100 +79,10 @@
     </div>
 
     <div class="cart-panel" id="cart-panel" style="display: none;">
-        <h3>📋 Дефектная ведомость</h3>
+        <h3 style="margin: 0 0 10px 0; color: #3b82f6;">📋 Дефектная ведомость</h3>
         <div id="cart-items"></div>
         <button class="btn-tg" id="btn-tg" onclick="sendToTelegram()">Отправить администратору</button>
     </div>
 </div>
 
 <script src="data.js"></script>
-<script>
-    if (window.innerWidth <= 850) { document.getElementById('sidebar').remove(); }
-
-    function checkPassword() {
-        if (document.getElementById('passwordInput').value === 'Saranskaya59') {
-            document.getElementById('login-screen').style.display = 'none';
-        } else { alert('❌ Неверный пароль!'); }
-    }
-
-    let cart = {};
-    function filterByArea(z) { document.getElementById('fZone').value = z; render(); }
-    
-    function render() {
-        const z = document.getElementById('fZone').value, m = document.getElementById('fModel').value, e = document.getElementById('fEngine').value, s = document.getElementById('search').value.toLowerCase();
-        const tbody = document.getElementById('tbody'); tbody.innerHTML = '';
-        if(typeof db === 'undefined') return;
-        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m||i.model==='all') && (e==='all'||i.engine===e||i.engine==='all') && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
-        .forEach(i => { tbody.innerHTML += `<tr><td><button class="btn-add" onclick="addToCart('${i.art.replace(/'/g, "\\'")}')">➕</button></td><td><code>${i.art}</code></td><td>${i.name}</td></tr>`; });
-    }
-
-    function addToCart(art) {
-        if (cart[art]) cart[art].qty += 1;
-        else { const item = db.find(i => i.art === art); cart[art] = { name: item.name, art: item.art, qty: 1 }; }
-        renderCart();
-    }
-
-    function updateQty(art, qty) { if (qty <= 0) delete cart[art]; else cart[art].qty = parseInt(qty); renderCart(); }
-
-    function renderCart() {
-        const div = document.getElementById('cart-items'), panel = document.getElementById('cart-panel');
-        div.innerHTML = '';
-        if (Object.keys(cart).length === 0) { panel.style.display = 'none'; return; }
-        panel.style.display = 'flex';
-        for (let art in cart) {
-            div.innerHTML += `
-                <div class="cart-item" id="item-${art.replace(/\W/g, '')}">
-                    <div><strong>${cart[art].name}</strong><br><code>${cart[art].art}</code></div>
-                    <select class="status-select">
-                        <option value="Новая деталь">Новая деталь</option>
-                        <option value="В ремонт (снято)">В ремонт (снято)</option>
-                        <option value="С ремонта (установлено)">С ремонта (установлено)</option>
-                    </select>
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        <input class="cart-qty" type="number" value="${cart[art].qty}" onchange="updateQty('${art.replace(/'/g, "\\'")}', this.value)">
-                        <input type="file" class="photo-input" accept="image/*">
-                        <button class="btn-remove" onclick="updateQty('${art.replace(/'/g, "\\'")}', 0)">✕</button>
-                    </div>
-                </div>`;
-        }
-    }
-
-    async function sendToTelegram() {
-        const vin = document.getElementById('carVin').value || "Не указан";
-        const btn = document.getElementById('btn-tg');
-        btn.innerHTML = "⏳ Обработка..."; btn.disabled = true;
-        
-        let text = `🛠 *Новая заявка*\n🚗 *VIN:* \`${vin}\`\n\n`;
-        
-        for (let art in cart) {
-            const itemEl = document.getElementById(`item-${art.replace(/\W/g, '')}`);
-            const status = itemEl.querySelector('.status-select').value;
-            const fileInput = itemEl.querySelector('.photo-input');
-            let photoLink = "";
-            
-            if (fileInput.files.length > 0) {
-                const formData = new FormData();
-                formData.append('image', fileInput.files[0]);
-                try {
-                    const resp = await fetch('https://api.imgbb.com/1/upload?key=6d3c01c0f8b8e01869804b46c63d59e9', { method: 'POST', body: formData });
-                    const res = await resp.json();
-                    if (res.success) photoLink = `\n📸 Фото: ${res.data.url}`;
-                } catch(e) { console.error("Фото не загружено"); }
-            }
-            text += `• ${cart[art].name} (${cart[art].art})\n  Статус: *${status}*${photoLink}\n\n`;
-        }
-
-        await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'Markdown' })
-        });
-
-        alert('✅ Заявка отправлена!');
-        cart = {}; renderCart();
-        btn.innerHTML = "Отправить администратору"; btn.disabled = false;
-    }
-    
-    window.onload = render;
-</script>
-</body>
-</html>
