@@ -8,6 +8,16 @@
     <style>
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        /* Прячем схему на маленьких экранах (телефонах) */
+@media (max-width: 768px) {
+    .sidebar {
+        display: none !important;
+    }
+    /* Растягиваем таблицу на весь экран, так как боковой панели больше нет */
+    .content {
+        width: 100% !important;
+    }
+}
 
         /* Слева: Схема */
         .sidebar { width: 45%; background: var(--panel); padding: 20px; border-right: 2px solid var(--accent); overflow-y: auto; display: flex; flex-direction: column; }
