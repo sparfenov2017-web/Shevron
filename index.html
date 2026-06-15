@@ -2,24 +2,59 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>СТО Система</title>
     <style>
-        /* Стили прежние, сокращаю для краткости */
         :root { --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --accent: #3b82f6; }
-        body { font-family: sans-serif; background: var(--bg); color: var(--text); margin: 0; }
-        .tab-btn { padding: 10px; background: #334155; border: none; color: white; cursor: pointer; }
-        .active { background: #3b82f6; }
-        .cart-item { background: #1e293b; padding: 10px; border-bottom: 1px solid #334155; }
-        .btn-action { background: #3b82f6; color: white; padding: 10px; border: none; width: 100%; cursor: pointer; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 350px; background: var(--panel); padding: 15px; border-right: 2px solid var(--accent); overflow-y: auto; }
+        .content { flex: 1; padding: 15px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .image-container { position: relative; width: 100%; }
+        .image-container img { width: 100%; border-radius: 8px; border: 2px solid #334155; }
+        .hotspot { position: absolute; border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); cursor: pointer; }
+        @media (max-width: 850px) { .sidebar { display: none; } }
+        .tabs { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+        .tab-btn { padding: 10px 15px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .tab-btn.active { background: var(--accent); }
+        .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
+        .table-wrapper { flex: 1; overflow-y: auto; background: var(--panel); border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
+        td { padding: 8px; border-bottom: 1px solid #334155; }
+        .cart-item { background: #1e293b; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .btn-action { background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
+        .admin-card { background: #1e293b; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #334155; }
+        .vin-tag { background: #3b82f6; padding: 3px 8px; border-radius: 4px; margin-right: 5px; display: inline-block; margin-top: 5px; }
     </style>
 </head>
 <body>
 
-<div id="ui" style="display:none;">
+<div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:999; display:flex; justify-content:center; align-items:center;">
+    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px;">
+        <h2>Вход</h2>
+        <input type="text" id="inLogin" placeholder="Логин" style="width:100%; margin-bottom:10px;">
+        <input type="password" id="inPass" placeholder="Пароль" style="width:100%;">
+        <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
+    </div>
+</div>
+
+<div class="sidebar" id="sidebar">
+    <h3>Схема</h3>
+    <div class="image-container">
+        <img src="scheme.jpg" alt="Схема">
+        <a href="#" class="hotspot" onclick="filterByArea('engine'); return false;" style="top: 72%; left: 25%; width: 20%; height: 8%;"></a>
+        <a href="#" class="hotspot" onclick="filterByArea('suspension'); return false;" style="top: 80%; left: 45%; width: 15%; height: 10%;"></a>
+    </div>
+</div>
+
+<div class="content">
     <div class="tabs">
-        <button class="tab-btn" id="b1" onclick="switchTab('catalog')">📦 Каталог</button>
-        <button class="tab-btn" id="b2" onclick="switchTab('cart')">🛒 Корзина</button>
-        <button class="tab-btn" id="b-admin" onclick="switchTab('admin')">⚙️ Админка</button>
+        <button class="tab-btn" id="b-cat" onclick="switchTab('catalog')">📦 Каталог</button>
+        <button class="tab-btn" id="b-cart" onclick="switchTab('cart')">🛒 Корзина</button>
+        <button class="tab-btn" id="b-hist" onclick="switchTab('history')">📝 История</button>
+        <button class="tab-btn" id="b-settings" onclick="switchTab('settings')">⚙️ Настройки</button>
+        <button class="tab-btn" id="b-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">👑 Админка</button>
         <button class="tab-btn" onclick="logout()" style="background:#ef4444;">🚪 Выход</button>
     </div>
     <div id="view-container"></div>
@@ -27,93 +62,153 @@
 
 <script src="data.js"></script>
 <script>
-    let cart = {};
+    // --- ИНИЦИАЛИЗАЦИЯ ---
+    let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager", "assignedCars": []}]');
+    if (!users.find(u => u.login === '0666261351')) users.push({login: '0666261351', pass: 'Saranskaya59', role: 'manager', assignedCars: []});
+    localStorage.setItem('users', JSON.stringify(users));
+    
     let currentUser = JSON.parse(localStorage.getItem('current_user'));
+    let cart = {};
 
     function login() {
-        let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager", "assignedCars": []}]');
-        const l = document.getElementById('inLogin').value;
-        const p = document.getElementById('inPass').value;
-        const u = users.find(x => x.login === l && x.pass === p);
-        if(u) { 
-            localStorage.setItem('current_user', JSON.stringify(u)); 
-            location.reload(); 
-        } else {
-            alert("Неверный логин или пароль. Всего юзеров в базе: " + users.length);
-        }
+        let currentUsers = JSON.parse(localStorage.getItem('users')); // Берем свежую базу!
+        const u = currentUsers.find(x => x.login === document.getElementById('inLogin').value && x.pass === document.getElementById('inPass').value);
+        if(u) { localStorage.setItem('current_user', JSON.stringify(u)); location.reload(); } else alert("❌ Неверно");
     }
-
     function logout() { localStorage.removeItem('current_user'); location.reload(); }
 
     function switchTab(t) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         const cont = document.getElementById('view-container');
-        if(t === 'catalog') {
-            cont.innerHTML = `<div><input id="search" onkeyup="renderTable()" placeholder="Поиск..."><div id="tbody"></div></div>`;
-            renderTable();
-        } else if(t === 'cart') {
-            cont.innerHTML = `<h3>Корзина</h3><input id="vin" placeholder="VIN"><div id="cart-list"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
-            renderCart();
-        } else if(t === 'admin') {
-            cont.innerHTML = `<h3>Пользователи</h3><input id="nL" placeholder="Логин"><input id="nP" placeholder="Пароль"><button onclick="addUser()">Добавить</button><div id="user-list"></div>`;
-            renderAdmin();
+        if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('b-admin').classList.add('active'); }
+        else if(t === 'settings') { cont.innerHTML = renderSettings(); document.getElementById('b-settings').classList.add('active'); }
+        else if(t === 'catalog') { 
+            cont.innerHTML = `
+            <div class="controls">
+                <input id="search" placeholder="Поиск..." onkeyup="renderTable()">
+                <select id="fZone" onchange="renderTable()"><option value="all">Узел</option><option value="engine">Двигатель</option><option value="suspension">Ходовая</option><option value="brakes">Тормоза</option><option value="transmission">Трансмиссия</option><option value="steering">Рулевое</option><option value="electric">Электрика</option><option value="body">Кузов</option></select>
+                <select id="fModel" onchange="renderTable()"><option value="all">Модель</option><option value="M998">M998</option><option value="M1151">M1151</option><option value="M1152">M1152</option><option value="F550">Ford F550</option></select>
+                <select id="fEngine" onchange="renderTable()"><option value="all">ДВС</option><option value="6.2">6.2</option><option value="6.5">6.5</option><option value="6.5t">6.5 Turbo</option></select>
+            </div>
+            <div class="table-wrapper"><table><thead><tr><th>+</th><th>Арт</th><th>Название</th></tr></thead><tbody id="tbody"></tbody></table></div>`;
+            document.getElementById('b-cat').classList.add('active'); renderTable(); 
         }
-    }
-
-    function renderTable() {
-        const s = document.getElementById('search').value.toLowerCase();
-        document.getElementById('tbody').innerHTML = db.filter(i => i.name.toLowerCase().includes(s)).map(i => `<div>${i.art} - ${i.name} <button onclick="addToCart('${i.art}')">➕</button></div>`).join('');
-    }
-
-    function addToCart(art) {
-        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 };
-        else cart[art].qty++;
-        alert("Добавлено");
-    }
-
-    function renderCart() {
-        const list = document.getElementById('cart-list');
-        list.innerHTML = '';
-        for(let art in cart) {
-            list.innerHTML += `<div class="cart-item">${cart[art].art} - ${cart[art].name} (x${cart[art].qty}) <select id="st-${art}"><option>Новая</option><option>В ремонт</option></select></div>`;
+        else if(t === 'cart') { 
+            let vinHtml = (currentUser.role === 'manager') 
+                ? `<input id="carVin" placeholder="Введите VIN машины...">`
+                : (currentUser.assignedCars?.length > 0) 
+                    ? `<select id="carVin">${currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`
+                    : `<input id="carVin" placeholder="Введите VIN (назначьте авто у админа)">`;
+            cont.innerHTML = `<h3>🛒 Заказ</h3>${vinHtml}<div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
+            document.getElementById('b-cart').classList.add('active'); renderCart();
         }
+        else if(t === 'history') { cont.innerHTML = "<h3>История</h3><div id='history-list'></div>"; document.getElementById('b-hist').classList.add('active'); renderHistory(); }
     }
 
-    async function sendToTelegram() {
-        const vin = document.getElementById('vin').value;
-        if(!vin) return alert('Введите VIN');
+    function renderSettings() {
+        return `<h3>⚙️ Настройки</h3>
+            <div class="admin-card">
+                <p>Смена пароля для: <b>${currentUser.login}</b></p>
+                <input id="oldPass" type="password" placeholder="Старый пароль" style="width:100%; margin-bottom:10px;">
+                <input id="newPass" type="password" placeholder="Новый пароль" style="width:100%; margin-bottom:10px;">
+                <button class="btn-action" onclick="changePassword()">Сохранить новый пароль</button>
+            </div>`;
+    }
+
+    function changePassword() {
+        const oldP = document.getElementById('oldPass').value;
+        const newP = document.getElementById('newPass').value;
+        if(oldP !== currentUser.pass) return alert("❌ Старый пароль неверный!");
+        if(!newP) return alert("Введите новый пароль");
         
-        let text = `🛠 Заявка: ${vin}\n`;
-        for(let art in cart) {
-            const st = document.getElementById('st-'+art).value;
-            // ТУТ ИСПРАВЛЕНИЕ: добавил cart[art].art
-            text += `\nАрт: ${cart[art].art} | ${cart[art].name} | ${cart[art].qty} шт. | Статус: ${st}`;
-        }
-
-        const response = await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' })
-        });
-        const res = await response.json();
-        if(res.ok) { alert('✅ Отправлено!'); cart = {}; switchTab('catalog'); } 
-        else { alert('❌ Ошибка отправки: ' + JSON.stringify(res)); }
+        currentUser.pass = newP;
+        let currentUsers = JSON.parse(localStorage.getItem('users'));
+        const idx = currentUsers.findIndex(u => u.login === currentUser.login);
+        currentUsers[idx].pass = newP;
+        
+        localStorage.setItem('users', JSON.stringify(currentUsers));
+        localStorage.setItem('current_user', JSON.stringify(currentUser));
+        alert("✅ Пароль успешно изменен!");
+        switchTab('settings');
     }
 
-    function renderAdmin() {
-        let users = JSON.parse(localStorage.getItem('users'));
-        document.getElementById('user-list').innerHTML = users.map(u => `<div>${u.login} (${u.role})</div>`).join('');
+    function renderTable() { const tbody = document.getElementById('tbody'); if(!tbody || typeof db === 'undefined') return; const s = document.getElementById('search').value.toLowerCase(); const z = document.getElementById('fZone').value; const m = document.getElementById('fModel').value; const e = document.getElementById('fEngine').value; tbody.innerHTML = ''; db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s))).forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; }); }
+    function addToCart(art) { if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 }; else cart[art].qty++; alert("Добавлено"); }
+    function removeFromCart(art) { delete cart[art]; renderCart(); }
+    function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; for(let art in cart) list.innerHTML += `<div class="cart-item"><strong>${cart[art].name}</strong> (${cart[art].art})<button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; float:right; cursor:pointer;">✕</button><br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select><input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;"></div>`; }
+    function renderHistory() { const list = document.getElementById('history-list'); const hist = JSON.parse(localStorage.getItem('order_history') || '[]'); list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join(''); }
+    
+    async function sendToTelegram() { 
+        const vinEl = document.getElementById('carVin'); 
+        const vin = vinEl ? vinEl.value : "Нет VIN"; 
+        if(!vin) return alert('Введите VIN'); 
+        
+        let text = `🛠 <b>Заявка: ${vin}</b>\n`; 
+        for(let art in cart) { 
+            const status = document.getElementById(`status-${art}`).value; 
+            const qty = document.getElementById(`qty-${art}`).value; 
+            // ИСПРАВЛЕНИЕ ТУТ: Добавлено cart[art].art чтобы приходил артикул!
+            text += `\nАрт: ${cart[art].art} | ${cart[art].name} (${qty} шт.) - ${status}`; 
+        } 
+        
+        if(Object.keys(cart).length === 0) return alert("Корзина пуста");
+
+        try { 
+            await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' }) }); 
+            let hist = JSON.parse(localStorage.getItem('order_history') || '[]'); 
+            hist.push({ date: new Date().toLocaleString(), vin: vin }); 
+            localStorage.setItem('order_history', JSON.stringify(hist)); 
+            alert('✅ Отправлено!'); 
+            cart = {}; 
+            switchTab('history'); 
+        } catch(e) { alert('Ошибка: ' + e); } 
     }
 
-    function addUser() {
-        let users = JSON.parse(localStorage.getItem('users'));
-        users.push({login: document.getElementById('nL').value, pass: document.getElementById('nP').value, role: 'mechanic'});
-        localStorage.setItem('users', JSON.stringify(users));
-        renderAdmin();
+    function renderAdmin() { 
+        let currentUsers = JSON.parse(localStorage.getItem('users'));
+        let html = `<h3>Пользователи</h3><div class="admin-card"><input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select><button class="btn-action" onclick="addUser()">Добавить</button></div>`; 
+        currentUsers.forEach((u, idx) => { let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет'; html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>Машины: ${cars}<br><input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button><button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button></div>`; }); return html; 
     }
+    function addUser() { 
+        const l = document.getElementById('newLog').value; 
+        const p = document.getElementById('newPass').value; 
+        const r = document.getElementById('newRole').value; 
+        if(l && p) { 
+            let currentUsers = JSON.parse(localStorage.getItem('users'));
+            currentUsers.push({login: l, pass: p, role: r, assignedCars: []}); 
+            localStorage.setItem('users', JSON.stringify(currentUsers)); 
+            switchTab('admin'); 
+        } 
+    }
+    function addVin(idx) { 
+        const vin = document.getElementById('vin-'+idx).value; 
+        if(vin) { 
+            let currentUsers = JSON.parse(localStorage.getItem('users'));
+            currentUsers[idx].assignedCars.push(vin); 
+            localStorage.setItem('users', JSON.stringify(currentUsers)); 
+            switchTab('admin'); 
+        } 
+    }
+    function removeVin(uIdx, vIdx) { 
+        let currentUsers = JSON.parse(localStorage.getItem('users'));
+        currentUsers[uIdx].assignedCars.splice(vIdx, 1); 
+        localStorage.setItem('users', JSON.stringify(currentUsers)); 
+        switchTab('admin'); 
+    }
+    function deleteUser(log) { 
+        if(log !== '0666261351') { 
+            let currentUsers = JSON.parse(localStorage.getItem('users'));
+            currentUsers = currentUsers.filter(u => u.login !== log); 
+            localStorage.setItem('users', JSON.stringify(currentUsers)); 
+            switchTab('admin'); 
+        } 
+    }
+    function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); }
 
     if (currentUser) {
         document.getElementById('login-screen').style.display = 'none';
-        document.getElementById('ui').style.display = 'block';
-        if(currentUser.role === 'manager') document.getElementById('b-admin').style.display = 'inline-block';
+        document.getElementById('b-cat').classList.add('active');
+        if (currentUser.role === 'manager') document.getElementById('b-admin').style.display = 'block';
         switchTab('catalog');
     }
 </script>
