@@ -53,8 +53,6 @@
         <button class="tab-btn" id="b-cat" onclick="switchTab('catalog')">📦 Каталог</button>
         <button class="tab-btn" id="b-cart" onclick="switchTab('cart')">🛒 Корзина</button>
         <button class="tab-btn" id="b-hist" onclick="switchTab('history')">📝 История</button>
-        <button class="tab-btn" id="b-settings" onclick="switchTab('settings')">⚙️ Настройки</button>
-        <button class="tab-btn" id="b-admin" onclick="switchTab('admin')" style="display:none; background:#8b5cf6;">👑 Админка</button>
         <button class="tab-btn" onclick="logout()" style="background:#ef4444;">🚪 Выход</button>
     </div>
     <div id="view-container"></div>
@@ -62,27 +60,44 @@
 
 <script src="data.js"></script>
 <script>
-    // --- ИНИЦИАЛИЗАЦИЯ ---
-    let users = JSON.parse(localStorage.getItem('users') || '[{"login": "0666261351", "pass": "Saranskaya59", "role": "manager", "assignedCars": []}]');
-    if (!users.find(u => u.login === '0666261351')) users.push({login: '0666261351', pass: 'Saranskaya59', role: 'manager', assignedCars: []});
+    // --- ИНИЦИАЛИЗАЦИЯ: База пользователей (общая для всех устройств) ---
+    let users = [
+        {login: "0666261351", pass: "Saranskaya59", role: "manager", assignedCars: []},
+        {login: "0664546988", pass: "0664546988", role: "manager", assignedCars: []},
+        {login: "0501037923", pass: "0501037923", role: "manager", assignedCars: []}
+        
+        // Когда понадобятся механики, добавляй их сюда вот так:
+        // {login: "логин_механика", pass: "пароль", role: "mechanic", assignedCars: ["VIN_1111", "VIN_2222"]},
+    ];
+    
+    // Сохраняем актуальную базу
     localStorage.setItem('users', JSON.stringify(users));
     
     let currentUser = JSON.parse(localStorage.getItem('current_user'));
     let cart = {};
 
     function login() {
-        let currentUsers = JSON.parse(localStorage.getItem('users')); // Берем свежую базу!
-        const u = currentUsers.find(x => x.login === document.getElementById('inLogin').value && x.pass === document.getElementById('inPass').value);
-        if(u) { localStorage.setItem('current_user', JSON.stringify(u)); location.reload(); } else alert("❌ Неверно");
+        const l = document.getElementById('inLogin').value;
+        const p = document.getElementById('inPass').value;
+        const u = users.find(x => x.login === l && x.pass === p);
+        if(u) { 
+            localStorage.setItem('current_user', JSON.stringify(u)); 
+            location.reload(); 
+        } else {
+            alert("❌ Неверный логин или пароль");
+        }
     }
-    function logout() { localStorage.removeItem('current_user'); location.reload(); }
+    
+    function logout() { 
+        localStorage.removeItem('current_user'); 
+        location.reload(); 
+    }
 
     function switchTab(t) {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
         const cont = document.getElementById('view-container');
-        if(t === 'admin') { cont.innerHTML = renderAdmin(); document.getElementById('b-admin').classList.add('active'); }
-        else if(t === 'settings') { cont.innerHTML = renderSettings(); document.getElementById('b-settings').classList.add('active'); }
-        else if(t === 'catalog') { 
+        
+        if(t === 'catalog') { 
             cont.innerHTML = `
             <div class="controls">
                 <input id="search" placeholder="Поиск..." onkeyup="renderTable()">
@@ -98,45 +113,53 @@
                 ? `<input id="carVin" placeholder="Введите VIN машины...">`
                 : (currentUser.assignedCars?.length > 0) 
                     ? `<select id="carVin">${currentUser.assignedCars.map(v => `<option value="${v}">${v}</option>`).join('')}</select>`
-                    : `<input id="carVin" placeholder="Введите VIN (назначьте авто у админа)">`;
+                    : `<input id="carVin" placeholder="Введите VIN">`;
             cont.innerHTML = `<h3>🛒 Заказ</h3>${vinHtml}<div id="cart-list" style="margin-top:10px;"></div><button class="btn-action" onclick="sendToTelegram()">Отправить</button>`;
             document.getElementById('b-cart').classList.add('active'); renderCart();
         }
-        else if(t === 'history') { cont.innerHTML = "<h3>История</h3><div id='history-list'></div>"; document.getElementById('b-hist').classList.add('active'); renderHistory(); }
+        else if(t === 'history') { 
+            cont.innerHTML = "<h3>История</h3><div id='history-list'></div>"; 
+            document.getElementById('b-hist').classList.add('active'); 
+            renderHistory(); 
+        }
     }
 
-    function renderSettings() {
-        return `<h3>⚙️ Настройки</h3>
-            <div class="admin-card">
-                <p>Смена пароля для: <b>${currentUser.login}</b></p>
-                <input id="oldPass" type="password" placeholder="Старый пароль" style="width:100%; margin-bottom:10px;">
-                <input id="newPass" type="password" placeholder="Новый пароль" style="width:100%; margin-bottom:10px;">
-                <button class="btn-action" onclick="changePassword()">Сохранить новый пароль</button>
-            </div>`;
+    function renderTable() { 
+        const tbody = document.getElementById('tbody'); 
+        if(!tbody || typeof db === 'undefined') return; 
+        const s = document.getElementById('search').value.toLowerCase(); 
+        const z = document.getElementById('fZone').value; 
+        const m = document.getElementById('fModel').value; 
+        const e = document.getElementById('fEngine').value; 
+        tbody.innerHTML = ''; 
+        db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s)))
+          .forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; }); 
     }
-
-    function changePassword() {
-        const oldP = document.getElementById('oldPass').value;
-        const newP = document.getElementById('newPass').value;
-        if(oldP !== currentUser.pass) return alert("❌ Старый пароль неверный!");
-        if(!newP) return alert("Введите новый пароль");
-        
-        currentUser.pass = newP;
-        let currentUsers = JSON.parse(localStorage.getItem('users'));
-        const idx = currentUsers.findIndex(u => u.login === currentUser.login);
-        currentUsers[idx].pass = newP;
-        
-        localStorage.setItem('users', JSON.stringify(currentUsers));
-        localStorage.setItem('current_user', JSON.stringify(currentUser));
-        alert("✅ Пароль успешно изменен!");
-        switchTab('settings');
+    
+    function addToCart(art) { 
+        if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 }; 
+        else cart[art].qty++; 
+        alert("Добавлено"); 
     }
-
-    function renderTable() { const tbody = document.getElementById('tbody'); if(!tbody || typeof db === 'undefined') return; const s = document.getElementById('search').value.toLowerCase(); const z = document.getElementById('fZone').value; const m = document.getElementById('fModel').value; const e = document.getElementById('fEngine').value; tbody.innerHTML = ''; db.filter(i => (z==='all'||i.zone===z) && (m==='all'||i.model===m) && (e==='all'||i.engine===e) && (i.name.toLowerCase().includes(s)||i.art.toLowerCase().includes(s))).forEach(i => { tbody.innerHTML += `<tr><td><button onclick="addToCart('${i.art}')">➕</button></td><td>${i.art}</td><td>${i.name}</td></tr>`; }); }
-    function addToCart(art) { if(!cart[art]) cart[art] = { ...db.find(i=>i.art===art), qty: 1 }; else cart[art].qty++; alert("Добавлено"); }
-    function removeFromCart(art) { delete cart[art]; renderCart(); }
-    function renderCart() { const list = document.getElementById('cart-list'); list.innerHTML = ''; for(let art in cart) list.innerHTML += `<div class="cart-item"><strong>${cart[art].name}</strong> (${cart[art].art})<button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; float:right; cursor:pointer;">✕</button><br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select><input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;"></div>`; }
-    function renderHistory() { const list = document.getElementById('history-list'); const hist = JSON.parse(localStorage.getItem('order_history') || '[]'); list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join(''); }
+    
+    function removeFromCart(art) { 
+        delete cart[art]; 
+        renderCart(); 
+    }
+    
+    function renderCart() { 
+        const list = document.getElementById('cart-list'); 
+        list.innerHTML = ''; 
+        for(let art in cart) { 
+            list.innerHTML += `<div class="cart-item"><strong>${cart[art].name}</strong> (${cart[art].art})<button onclick="removeFromCart('${art}')" style="background:red; border:none; color:white; float:right; cursor:pointer;">✕</button><br><select id="status-${art}"><option>Новая</option><option>В ремонт</option><option>Установлено</option></select><input type="number" value="${cart[art].qty}" id="qty-${art}" style="width:50px;"></div>`; 
+        } 
+    }
+    
+    function renderHistory() { 
+        const list = document.getElementById('history-list'); 
+        const hist = JSON.parse(localStorage.getItem('order_history') || '[]'); 
+        list.innerHTML = hist.reverse().map(o => `<div class="admin-card">${o.date} | ${o.vin}</div>`).join(''); 
+    }
     
     async function sendToTelegram() { 
         const vinEl = document.getElementById('carVin'); 
@@ -147,68 +170,37 @@
         for(let art in cart) { 
             const status = document.getElementById(`status-${art}`).value; 
             const qty = document.getElementById(`qty-${art}`).value; 
-            // ИСПРАВЛЕНИЕ ТУТ: Добавлено cart[art].art чтобы приходил артикул!
             text += `\nАрт: ${cart[art].art} | ${cart[art].name} (${qty} шт.) - ${status}`; 
         } 
         
         if(Object.keys(cart).length === 0) return alert("Корзина пуста");
 
         try { 
-            await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' }) }); 
+            await fetch(`https://api.telegram.org/bot8625933875:AAG-BVWfpoo3kDQjPvQ5XxJA5r8kEU7XH4w/sendMessage`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ chat_id: '483561525', text: text, parse_mode: 'HTML' }) 
+            }); 
             let hist = JSON.parse(localStorage.getItem('order_history') || '[]'); 
             hist.push({ date: new Date().toLocaleString(), vin: vin }); 
             localStorage.setItem('order_history', JSON.stringify(hist)); 
             alert('✅ Отправлено!'); 
             cart = {}; 
             switchTab('history'); 
-        } catch(e) { alert('Ошибка: ' + e); } 
+        } catch(e) { 
+            alert('Ошибка: ' + e); 
+        } 
     }
 
-    function renderAdmin() { 
-        let currentUsers = JSON.parse(localStorage.getItem('users'));
-        let html = `<h3>Пользователи</h3><div class="admin-card"><input id="newLog" placeholder="Логин"><input id="newPass" placeholder="Пароль"><select id="newRole"><option value="mechanic">Механик</option><option value="manager">Менеджер</option></select><button class="btn-action" onclick="addUser()">Добавить</button></div>`; 
-        currentUsers.forEach((u, idx) => { let cars = u.assignedCars?.map((v, vIdx) => `<span class="vin-tag">${v} <button onclick="removeVin(${idx}, ${vIdx})" style="background:none; border:none; color:white; cursor:pointer;">×</button></span>`).join('') || 'нет'; html += `<div class="admin-card"><strong>${u.login}</strong> (${u.role})<br>Машины: ${cars}<br><input id="vin-${idx}" placeholder="VIN" style="width:100px;"><button onclick="addVin(${idx})">+</button><button onclick="deleteUser('${u.login}')" style="background:red; border:none; color:white; float:right;">✕</button></div>`; }); return html; 
+    function filterByArea(z) { 
+        document.getElementById('fZone').value = z; 
+        switchTab('catalog'); 
     }
-    function addUser() { 
-        const l = document.getElementById('newLog').value; 
-        const p = document.getElementById('newPass').value; 
-        const r = document.getElementById('newRole').value; 
-        if(l && p) { 
-            let currentUsers = JSON.parse(localStorage.getItem('users'));
-            currentUsers.push({login: l, pass: p, role: r, assignedCars: []}); 
-            localStorage.setItem('users', JSON.stringify(currentUsers)); 
-            switchTab('admin'); 
-        } 
-    }
-    function addVin(idx) { 
-        const vin = document.getElementById('vin-'+idx).value; 
-        if(vin) { 
-            let currentUsers = JSON.parse(localStorage.getItem('users'));
-            currentUsers[idx].assignedCars.push(vin); 
-            localStorage.setItem('users', JSON.stringify(currentUsers)); 
-            switchTab('admin'); 
-        } 
-    }
-    function removeVin(uIdx, vIdx) { 
-        let currentUsers = JSON.parse(localStorage.getItem('users'));
-        currentUsers[uIdx].assignedCars.splice(vIdx, 1); 
-        localStorage.setItem('users', JSON.stringify(currentUsers)); 
-        switchTab('admin'); 
-    }
-    function deleteUser(log) { 
-        if(log !== '0666261351') { 
-            let currentUsers = JSON.parse(localStorage.getItem('users'));
-            currentUsers = currentUsers.filter(u => u.login !== log); 
-            localStorage.setItem('users', JSON.stringify(currentUsers)); 
-            switchTab('admin'); 
-        } 
-    }
-    function filterByArea(z) { document.getElementById('fZone').value = z; switchTab('catalog'); }
 
+    // Запуск интерфейса, если пользователь авторизован
     if (currentUser) {
         document.getElementById('login-screen').style.display = 'none';
         document.getElementById('b-cat').classList.add('active');
-        if (currentUser.role === 'manager') document.getElementById('b-admin').style.display = 'block';
         switchTab('catalog');
     }
 </script>
