@@ -17,7 +17,7 @@
         .tab-btn { padding: 10px 15px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .tab-btn.active { background: var(--accent); }
         .controls { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; }
-        input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; }
+        input, select { padding: 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: #fff; box-sizing: border-box; }
         .table-wrapper { flex: 1; overflow-y: auto; background: var(--panel); border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #334155; padding: 10px; position: sticky; top: 0; text-align: left; }
@@ -31,8 +31,9 @@
 <body>
 
 <div id="login-screen" style="position:fixed; top:0; left:0; width:100%; height:100%; background:#0f172a; z-index:999; display:flex; justify-content:center; align-items:center;">
-    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px;">
-        <h2>Вход</h2>
+    <div style="background:#1e293b; padding:30px; border-radius:12px; width:300px; text-align: center;">
+        <h2 style="margin-bottom: 5px;">Вход</h2>
+        <p style="color: #94a3b8; font-size: 0.9em; margin-top: 0; margin-bottom: 20px;">Версия 2.0</p>
         <input type="text" id="inLogin" placeholder="Логин" style="width:100%; margin-bottom:10px;">
         <input type="password" id="inPass" placeholder="Пароль" style="width:100%;">
         <button onclick="login()" class="btn-action" style="margin-top:15px;">Войти</button>
